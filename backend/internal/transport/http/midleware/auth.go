@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"Gofra_Market/internal/domain"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -16,11 +18,7 @@ type ctxKey string // userID
 // SessionStore is the minimal interface used by the middleware. Using an interface
 // allows tests to inject a fake implementation.
 type SessionStore interface {
-	BySID(ctx context.Context, sid string) (*struct {
-		ID        primitive.ObjectID
-		UserID    primitive.ObjectID
-		ExpiredAt time.Time
-	}, error)
+	BySID(ctx context.Context, sid string) (*domain.Session, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
 }
 
