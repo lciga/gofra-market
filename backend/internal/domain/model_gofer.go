@@ -9,9 +9,9 @@ import (
 
 // Модель гофера
 type Gofer struct {
-	ID        primitive.ObjectID `bson: _id,omitempty` // Уникальный идентификатор
-	OwnerID   primitive.ObjectID `bson: "owner_id"`    // Идентификатор владельца
-	Name      string             `bson: "name"`        // Имя гофера
-	Rarity    int                `bson: "rarity"`      // Редкость гофера
-	CreatedAt time.Time          `bson: "created_at"`  // Время создания
+	ID        primitive.ObjectID `bson:"_id,omitempty"` // Уникальный идентификатор
+	OwnerID   primitive.ObjectID `bson:"owner_id"`      // Идентификатор владельца
+	Name      string             `bson:"name"`          // Имя гофера
+	Rarity    int                `bson:"rarity"`        // Редкость гофера
+	CreatedAt time.Time          `bson:"created_at"`    // Время создания
 }
