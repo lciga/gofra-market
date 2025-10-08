@@ -1,0 +1,5 @@
+[
+  { "createIndexes": "users", "indexes": [ { "key": { "login": 1 }, "name": "ux_users_login", "unique": true } ] },
+  { "createIndexes": "listings", "indexes": [ { "key": { "is_sold": 1, "price": 1 }, "name": "ix_listings_is_sold_price" }, { "key": { "seller_id": 1 }, "name": "ix_listings_seller_id" } ] },
+  { "createIndexes": "sessions", "indexes": [ { "key": { "expires_at": 1 }, "name": "ttl_sessions_expires_at", "expireAfterSeconds": 0 } ] }
+]

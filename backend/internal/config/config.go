@@ -10,11 +10,13 @@ import (
 
 // Структура для хранения конфигурации приложения
 type Config struct {
-	MongoURI   string
-	DBName     string
-	LogLevel   string
-	ServerPort int
-	GinMode    string
+	MongoURI      string
+	DBName        string
+	MongoUser     string
+	MongoPassword string
+	LogLevel      string
+	ServerPort    int
+	GinMode       string
 }
 
 // Load загружает конфигурацию из переменных окружения.
@@ -24,6 +26,8 @@ func Load() *Config {
 	cfg := &Config{}
 
 	cfg.MongoURI = os.Getenv("MONGO_URL")
+	cfg.MongoUser = os.Getenv("MONGO_USER")
+	cfg.MongoPassword = os.Getenv("MONGO_PASSWORD")
 	cfg.DBName = os.Getenv("DB_NAME")
 	cfg.LogLevel = os.Getenv("LOG_LEVEL")
 	cfg.ServerPort, _ = strconv.Atoi(os.Getenv("SERVER_PORT"))
