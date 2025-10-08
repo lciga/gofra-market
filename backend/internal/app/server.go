@@ -26,7 +26,7 @@ func NewServer(cfg *config.Config) *gin.Engine {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if c.Request.Method != "POST" || c.Request.Method != "GET" {
+		if c.Request.Method != "POST" && c.Request.Method != "GET" {
 			c.AbortWithStatus(204)
 			return
 		}
