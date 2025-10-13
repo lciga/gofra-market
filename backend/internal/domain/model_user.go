@@ -13,4 +13,5 @@ type User struct {
 	PassHash  []byte             `bson:"pass_hash"`     // Хэш пароля
 	Balance   int64              `bson:"balance"`       // Баланс пользователя в минимальных единицах валюты (например, центы)
 	CreatedAt time.Time          `bson:"created_at"`    // Время создания
+	// Добавить вывод в профиле пользователя информации о выставленных лотах
 }
