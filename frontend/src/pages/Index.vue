@@ -11,7 +11,7 @@
                     icon="add"
                     label="Создать листинг"
                     @click="showCreateModal = true"
-                    v-if="$store.state.auth.isAuthinticatedw"
+                    v-if="$store.state.auth.isAuthenticated"
                 />
             </div>
         </div>
@@ -22,7 +22,7 @@
             <q-spinner-gears size="50px" color="primary"/>
         </q-inner-loading>
 
-        <div v-if="!loading && filteredListings.lenght===0" class="text-center q-my-xl">
+        <div v-if="!loading && filteredListings.length === 0" class="text-center q-my-xl">
             <q-icon name="mdi-package-variant" size="100px" color="grey-4"/>
             <div class="text-h6 q-mt-md text-grey">Нет доступных листингов</div>
         </div>
@@ -31,7 +31,7 @@
             <div v-for="listing in filteredListings" :key="listing.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
                 <app-gofer-card
                     :listing="listing"
-                    @click="$router.push(`listing/${listing.id}`)"
+                    @click="$router.push(`/listing/${listing.id}`)"
                 />
             </div>
         </div>
@@ -50,18 +50,18 @@ import {useStore} from 'vuex'
 export default {
     name: 'PageIndex',
     setup() {
-        const store = useStore
+        const store = useStore()
         const showCreateModal = ref(false)
 
         const loading = computed(() => store.state.listing.loading)
-        const filteredListings = computed(() => store.getters['listings/filteredListings'])
+        const filteredListings = computed(() => store.getters['listing/filteredListings'])
 
         onMounted(() => {
-            store.dispatch('listings/fetchListings')
+            store.dispatch('listing/fetchListings')
         })
 
         const handleListingCreated = () => {
-            store.dispatch('listings/fetchListings')            
+            store.dispatch('listing/fetchListings')
         }
 
         return {

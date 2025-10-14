@@ -1,18 +1,20 @@
-import axois from 'axois'
+import axios from 'axios'
 
-const api = axois.create({
-	baseURL: process.env.API_URL || 'http://localhost:8080/api'
+const api = axios.create({
+	baseURL: process.env.API_URL || 'http://localhost:8080/api',
+	withCredentials: true, // send cookies (sid) for session auth
 })
 
-api.interseptors.request.use((config) => {
-	const token  = localStorage.getItem('token')
+api.interceptors.request.use((config) => {
+	const token = localStorage.getItem('token')
 	if (token) {
-		config.Headers.Authorizaton = `Bearer: ${token}`
+		config.headers = config.headers || {}
+		config.headers.Authorization = `Bearer ${token}`
 	}
 	return config
 })
 
-api.interseptors.response.use(
+api.interceptors.response.use(
 	response => response,
 	error => {
 		if (error.response?.status === 401) {
@@ -26,16 +28,17 @@ api.interseptors.response.use(
 export const authAPI = {
 	register: (data) => api.post('/register', data),
 	login: (data) => api.post('/login', data),
-	getPorfile: () => api.get('/me'),
+	getProfile: () => api.get('/me'),
 }
 
 export const listingAPI = {
-	getMarket: (params) => api.get('/market', {params}),
-	getListing: (id) => api.get(`/listing/${id}`),
-	createListing: (data) => api.post('/listing', data),
+	getMarket: (params) => api.get('/market', { params }),
+	getListing: (id) => api.get(`/listings/${id}`),
+	createListing: (data) => api.post('/listings', data),
 	buy: (data) => api.post('/buy', data),
-	bump: (id) => api.post(`/listing/${id}/bump`),
-	uploadImage: (id, data) => api.post(`/listings/${id}/image_from_url`, data),getImageMeta: (id) => api.get(`/listings/${id}/image/meta`),
+	bump: (id) => api.post(`/listings/${id}/bump`),
+	uploadImage: (id, data) => api.post(`/listings/${id}/image_from_url`, data),
+	getImageMeta: (id) => api.get(`/listings/${id}/image/meta`),
 }
 
 export default api
