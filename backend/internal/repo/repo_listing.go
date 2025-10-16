@@ -42,7 +42,7 @@ func (r *ListingRepo) SetSold(ctx context.Context, id, buyer primitive.ObjectID)
 	return err
 }
 
-func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID, url *string, ct *string, at *time.Time, b64 *string) error {
+func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID, url *string, ct *string, at *time.Time, b64 *string, imageData *string) error {
 	// Update nested image fields to match domain.ImageMeta inside Listing.image
 	set := bson.M{}
 	if url != nil {
@@ -56,6 +56,9 @@ func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID
 	}
 	if b64 != nil {
 		set["image.debug_snippet_b64"] = *b64
+	}
+	if imageData != nil {
+		set["image.image_data"] = *imageData
 	}
 	update := bson.M{"$set": set}
 	_, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, update)
@@ -128,7 +131,9 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 	}
 	defer countCur.Close(ctx)
 
-	var countResult []struct{ Total int64 `bson:"total"` }
+	var countResult []struct {
+		Total int64 `bson:"total"`
+	}
 	if err := countCur.All(ctx, &countResult); err == nil && len(countResult) > 0 {
 		total = countResult[0].Total
 	}

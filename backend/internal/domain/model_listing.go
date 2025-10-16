@@ -13,6 +13,7 @@ type ImageMeta struct {
 	FetchedAt    *time.Time `bson:"fetched_at,omitempty"`        // Время получения изображения (если применимо)
 	ContentType  *string    `bson:"content_type,omitempty"`      // MIME-тип изображения (если применимо)
 	DebugSnippet *string    `bson:"debug_snippet_b64,omitempty"` // Отладочный фрагмент (если применимо)
+	ImageData    *string    `bson:"image_data,omitempty"`        // Полное изображение в base64 (для файловых загрузок)
 }
 
 // Модель листинга

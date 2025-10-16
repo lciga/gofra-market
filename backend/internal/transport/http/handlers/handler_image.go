@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"Gofra_Market/internal/service"
+	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -87,8 +88,8 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 		return
 	}
 
-	// Get image source URL from metadata
-	sourceURL, err := h.svc.GetImageSourceURL(c.Request.Context(), id)
+	// Get image data from service
+	imageData, contentType, sourceURL, err := h.svc.GetImage(c.Request.Context(), id)
 	if err != nil {
 		// No image found, return 404
 		c.Status(http.StatusNotFound)
@@ -101,8 +102,28 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 		return
 	}
 
-	// For file uploads, we don't store the actual image data
-	// Return 404 so frontend uses placeholder
+	// For file uploads, return the base64 decoded image data
+	if imageData != nil && *imageData != "" {
+		// Decode base64
+		decoded, err := base64.StdEncoding.DecodeString(*imageData)
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		// Set content type
+		if contentType != nil && *contentType != "" {
+			c.Header("Content-Type", *contentType)
+		} else {
+			c.Header("Content-Type", "application/octet-stream")
+		}
+
+		// Return image data
+		c.Data(http.StatusOK, c.GetHeader("Content-Type"), decoded)
+		return
+	}
+
+	// No image data available
 	c.Status(http.StatusNotFound)
 }
 

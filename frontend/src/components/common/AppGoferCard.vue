@@ -80,12 +80,12 @@ export default {
 		const truncateDescription = (description) => truncateText(description, 80)
 
 		const getImageURL = (listing) => {
-			// Для URL загрузок - используем source_url напрямую
-			if (listing.image?.source_url) {
-				return listing.image.source_url
+			// Используем API эндпоинт для получения изображения
+			// Если есть изображение (source_url или uploaded file), бэкенд вернет его
+			// Иначе вернется 404 и покажется placeholder через slot:error
+			if (listing.image && (listing.image.source_url || listing.image.content_type)) {
+				return `http://localhost:8080/api/listings/${listing.id}/image`
 			}
-			// Для всех остальных случаев - placeholder
-			// (включая файловые загрузки, т.к. мы не храним сами файлы)
 			return goferPlaceholder
 		}
 

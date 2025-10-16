@@ -48,7 +48,7 @@ func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.Ob
 	at := timePtr(time.Now())
 
 	// обновляем метаданные в базе
-	return s.list.UpdateImageMeta(ctx, listingID, &url, ct, at, &b64s)
+	return s.list.UpdateImageMeta(ctx, listingID, &url, ct, at, &b64s, nil)
 }
 
 func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID) (ct *string, b64 *string, at *time.Time, err error) {
@@ -60,6 +60,9 @@ func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID
 }
 
 func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.ObjectID, contentType string, data []byte) error {
+	// Кодируем полное изображение в base64
+	fullImageB64 := base64.StdEncoding.EncodeToString(data)
+
 	// Читаем первые 512 байт для отладочного сниппета
 	snippetSize := 512
 	if len(data) < snippetSize {
@@ -72,8 +75,8 @@ func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.Objec
 	at := timePtr(time.Now())
 	// For file uploads, source_url is nil (not a URL)
 
-	// обновляем метаданные в базе
-	return s.list.UpdateImageMeta(ctx, listingID, nil, ct, at, &b64s)
+	// обновляем метаданные в базе, включая полное изображение
+	return s.list.UpdateImageMeta(ctx, listingID, nil, ct, at, &b64s, &fullImageB64)
 }
 
 func timePtr(t time.Time) *time.Time { return &t }
@@ -84,4 +87,12 @@ func (s *ImageService) GetImageSourceURL(ctx context.Context, listingID primitiv
 		return nil, err
 	}
 	return listing.Image.SourceURL, nil
+}
+
+func (s *ImageService) GetImage(ctx context.Context, listingID primitive.ObjectID) (imageData *string, contentType *string, sourceURL *string, err error) {
+	listing, err := s.list.ByID(ctx, listingID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return listing.Image.ImageData, listing.Image.ContentType, listing.Image.SourceURL, nil
 }
