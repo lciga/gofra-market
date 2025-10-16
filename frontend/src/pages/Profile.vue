@@ -82,8 +82,9 @@
 </template>
 
 <script>
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { useStore } from 'vuex'
+import { useRoute } from 'vue-router'
 
 import AppGoferCard from '../components/common/AppGoferCard.vue'
 import { formatPrice } from '../utils/formatters'
@@ -96,6 +97,7 @@ export default defineComponent({
     },
     setup() {
         const store = useStore()
+        const route = useRoute()
         const tab = ref('listings')
         const myListings = ref([])
 
@@ -124,12 +126,23 @@ export default defineComponent({
             fetchMyListings()
         })
 
+        // Watch route to refresh when user navigates to profile page
+        watch(
+            () => route.path,
+            (newPath) => {
+                if (newPath === '/profile') {
+                    fetchMyListings()
+                }
+            }
+        )
+
         return {
             tab,
             user,
             userListings,
             userPurchases,
             formatPrice,
+            fetchMyListings,
         }
     },
 })

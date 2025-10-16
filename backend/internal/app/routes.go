@@ -25,6 +25,7 @@ func RegisterRoutes(e *gin.Engine, h Handlers) {
 	api := e.Group("/api")
 	api.GET("/me", h.Auth.Me)
 	api.GET("/my-listings", h.Listing.GetMyListings)
+	api.GET("/my-gofers", h.Listing.GetMyGofers)
 	api.POST("/listings", h.Listing.Create)
 	api.POST("/buy", h.Listing.Buy)
 	api.POST("/listings/:id/bump", h.Listing.Bump)

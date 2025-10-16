@@ -89,51 +89,54 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 
 	cards = []Card{} // Initialize empty slice
 
-	// iterate cursor
+	// iterate cursor - now includes gofer from $lookup
 	for cur.Next(ctx) {
-		var listing domain.Listing
-		if err := cur.Decode(&listing); err != nil {
+		// Decode aggregation result which has embedded gofer
+		var result struct {
+			domain.Listing `bson:",inline"`
+			Gofer          *domain.Gofer `bson:"gofer"`
+		}
+		if err := cur.Decode(&result); err != nil {
 			return nil, 0, err
 		}
 
-		gofer, err := s.gofers.ByID(ctx, listing.GoferID)
-		if err != nil {
-			// Skip this listing if gofer not found instead of failing entirely
+		// Skip if gofer is missing (shouldn't happen with lookup)
+		if result.Gofer == nil {
 			continue
 		}
 
 		var buyerID string
-		if listing.BuyerID != primitive.NilObjectID {
-			buyerID = listing.BuyerID.Hex()
+		if result.BuyerID != primitive.NilObjectID {
+			buyerID = result.BuyerID.Hex()
 		}
 
 		var fetchedAt *string
-		if listing.Image.FetchedAt != nil {
-			s := listing.Image.FetchedAt.Format(time.RFC3339)
+		if result.Image.FetchedAt != nil {
+			s := result.Image.FetchedAt.Format(time.RFC3339)
 			fetchedAt = &s
 		}
 
 		// Hide description for public market view (only visible to seller/buyer)
 		// NoSQL injection still works because it filters at DB level before this
 		card := Card{
-			ID:          listing.ID.Hex(),
-			GoferID:     listing.GoferID.Hex(),
-			SellerID:    listing.SellerID.Hex(),
+			ID:          result.ID.Hex(),
+			GoferID:     result.GoferID.Hex(),
+			SellerID:    result.SellerID.Hex(),
 			BuyerID:     buyerID,
-			Price:       listing.Price,
-			IsSold:      listing.IsSold,
+			Price:       result.Price,
+			IsSold:      result.IsSold,
 			Description: "", // Always hidden in market listing
-			CreatedAt:   listing.CreatedAt.Format(time.RFC3339),
+			CreatedAt:   result.CreatedAt.Format(time.RFC3339),
 			Gofer: MarketGofer{
-				ID:     gofer.ID.Hex(),
-				Name:   gofer.Name,
-				Rarity: gofer.Rarity,
+				ID:     result.Gofer.ID.Hex(),
+				Name:   result.Gofer.Name,
+				Rarity: result.Gofer.Rarity,
 			},
 		}
-		card.Image.SourceURL = listing.Image.SourceURL
-		card.Image.ContentType = listing.Image.ContentType
+		card.Image.SourceURL = result.Image.SourceURL
+		card.Image.ContentType = result.Image.ContentType
 		card.Image.FetchedAt = fetchedAt
-		card.Image.DebugBase64Snippet = listing.Image.DebugSnippet
+		card.Image.DebugBase64Snippet = result.Image.DebugSnippet
 
 		cards = append(cards, card)
 	}

@@ -48,6 +48,7 @@ export const listingAPI = {
 	getMarket: (params) => api.get('/market', { params }),
 	getListing: (id) => api.get(`/listings/${id}`),
 	getMyListings: () => api.get('/my-listings'),
+	getMyGofers: () => api.get('/my-gofers'),
 	createListing: (data) => api.post('/listings', data),
 	buy: (data) => api.post('/buy', data),
 	bump: (id) => api.post(`/listings/${id}/bump`),

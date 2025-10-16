@@ -34,7 +34,7 @@
 
                     <div class="q-mb-lg">
                         <div class="text-h6 q-mb-sm">Описание</div>
-                        <p class="text-body1">{{ listing.description || 'Нет описания' }}</p>
+                        <p class="text-body1">{{ listing.description }}</p>
                     </div>
 
                     <q-btn
@@ -78,10 +78,12 @@ export default {
         const isAuthenticated = computed(() => store.state.auth.isAuthenticated)
 
         const getImageURL = (listing) => {
-            // Если есть source_url - используем его, иначе placeholder
+            // Для URL загрузок - используем source_url напрямую
             if (listing?.image?.source_url) {
                 return listing.image.source_url
             }
+            // Для всех остальных случаев - placeholder
+            // (включая файловые загрузки, т.к. мы не храним сами файлы)
             return goferPlaceholder
         }
 
@@ -97,7 +99,8 @@ export default {
                     type: 'positive',
                     message: 'Успешная покупка!'
                 })
-                router.push('/')
+                // Navigate to home page (listings will be refreshed automatically)
+                await router.push('/')
             } catch (error) {
                 const errorMessage = error.response?.data?.error || error.message || 'Ошибка при покупке'
                 $q.notify({

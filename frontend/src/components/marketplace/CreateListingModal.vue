@@ -10,6 +10,7 @@
                         v-model="form.gofer_name"
                         label="Имя Гофера"
                         :rules="[val => !!val || 'Имя Гофера обязательно']"
+                        hint="Создайте нового гофера для продажи"
                     />
 
                     <q-select
@@ -188,6 +189,9 @@ export default {
                     message: 'Листинг успешно создан',
                 })
 
+                // Refresh listings after image upload completes
+                await store.dispatch('listing/fetchListings')
+                
                 emit('created')
                 closeModal()
             } catch (error) {

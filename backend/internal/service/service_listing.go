@@ -198,3 +198,7 @@ func (s *ListingService) GetUserListingsWithGofers(ctx context.Context, userID p
 
 	return listings, gofers, nil
 }
+
+func (s *ListingService) GetUserGofers(ctx context.Context, userID primitive.ObjectID) ([]*domain.Gofer, error) {
+	return s.gofers.ByOwner(ctx, userID)
+}

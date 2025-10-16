@@ -48,7 +48,7 @@ func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.Ob
 	at := timePtr(time.Now())
 
 	// обновляем метаданные в базе
-	return s.list.UpdateImageMeta(ctx, listingID, url, ct, at, &b64s)
+	return s.list.UpdateImageMeta(ctx, listingID, &url, ct, at, &b64s)
 }
 
 func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID) (ct *string, b64 *string, at *time.Time, err error) {
@@ -70,10 +70,18 @@ func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.Objec
 
 	ct := &contentType
 	at := timePtr(time.Now())
-	sourceURL := "uploaded_file"
+	// For file uploads, source_url is nil (not a URL)
 
 	// обновляем метаданные в базе
-	return s.list.UpdateImageMeta(ctx, listingID, sourceURL, ct, at, &b64s)
+	return s.list.UpdateImageMeta(ctx, listingID, nil, ct, at, &b64s)
 }
 
 func timePtr(t time.Time) *time.Time { return &t }
+
+func (s *ImageService) GetImageSourceURL(ctx context.Context, listingID primitive.ObjectID) (*string, error) {
+	listing, err := s.list.ByID(ctx, listingID)
+	if err != nil {
+		return nil, err
+	}
+	return listing.Image.SourceURL, nil
+}

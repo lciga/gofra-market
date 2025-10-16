@@ -33,7 +33,7 @@
         "description": {"bsonType": "string", "minLength": 1, "maxLength": 256},
         "image": {"bsonType": ["object", "null"], "properties": {
           "kind": {"bsonType": "string", "enum": ["url", "upload"]},
-          "source_url": {"bsonType": ["string", "null"], "pattern": "^https?://.+"},
+          "source_url": {"bsonType": ["string", "null"]},
           "fetched_at": {"bsonType": ["date", "null"]},
           "content_type": {"bsonType": ["string", "null"]},
           "debug_snippet_b64": {"bsonType": ["string", "null"]}

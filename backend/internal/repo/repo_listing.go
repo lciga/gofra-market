@@ -18,6 +18,10 @@ func NewListingRepo(c *mongo.Collection) *ListingRepo {
 }
 
 func (r *ListingRepo) Create(ctx context.Context, l *domain.Listing) error {
+	// Generate ID if not set
+	if l.ID.IsZero() {
+		l.ID = primitive.NewObjectID()
+	}
 	_, err := r.c.InsertOne(ctx, l)
 	return err
 }
@@ -38,9 +42,12 @@ func (r *ListingRepo) SetSold(ctx context.Context, id, buyer primitive.ObjectID)
 	return err
 }
 
-func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID, url string, ct *string, at *time.Time, b64 *string) error {
+func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID, url *string, ct *string, at *time.Time, b64 *string) error {
 	// Update nested image fields to match domain.ImageMeta inside Listing.image
-	set := bson.M{"image.source_url": url}
+	set := bson.M{}
+	if url != nil {
+		set["image.source_url"] = *url
+	}
 	if ct != nil {
 		set["image.content_type"] = *ct
 	}
@@ -55,16 +62,77 @@ func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID
 	return err
 }
 
-// Уязвимая функция запрос кладётся прямо в Find()
+// Уязвимая функция: запрос кладётся прямо в агрегацию без валидации
+// Используем $lookup для присоединения gofers, чтобы можно было фильтровать по gofer.name
 func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, skip int64, sort bson.D) (cur *mongo.Cursor, total int64, err error) {
-	cur, err = r.c.Find(ctx, raw, options.Find().SetLimit(limit).SetSkip(skip).SetSort(sort))
+	// Build aggregation pipeline
+	pipeline := mongo.Pipeline{
+		// Stage 1: Lookup gofers
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "gofers"},
+			{Key: "localField", Value: "gofer_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "gofer"},
+		}}},
+		// Stage 2: Unwind gofer array (converts array to single object)
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$gofer"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
+	}
+
+	// Stage 3: Match with user filter (УЯЗВИМОСТЬ!)
+	if len(raw) > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$match", Value: raw}})
+	}
+
+	// Stage 4: Sort
+	if len(sort) > 0 {
+		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: sort}})
+	}
+
+	// Stage 5: Pagination
+	pipeline = append(pipeline,
+		bson.D{{Key: "$skip", Value: skip}},
+		bson.D{{Key: "$limit", Value: limit}},
+	)
+
+	// Execute aggregation
+	cur, err = r.c.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err = r.c.CountDocuments(ctx, raw)
-	if err != nil {
-		return nil, 0, err
+
+	// Count total matching documents (before pagination)
+	countPipeline := mongo.Pipeline{
+		// Same lookup and unwind
+		{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "gofers"},
+			{Key: "localField", Value: "gofer_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "gofer"},
+		}}},
+		{{Key: "$unwind", Value: bson.D{
+			{Key: "path", Value: "$gofer"},
+			{Key: "preserveNullAndEmptyArrays", Value: true},
+		}}},
 	}
+	if len(raw) > 0 {
+		countPipeline = append(countPipeline, bson.D{{Key: "$match", Value: raw}})
+	}
+	countPipeline = append(countPipeline, bson.D{{Key: "$count", Value: "total"}})
+
+	countCur, err := r.c.Aggregate(ctx, countPipeline)
+	if err != nil {
+		return cur, 0, nil // Return cursor but no count
+	}
+	defer countCur.Close(ctx)
+
+	var countResult []struct{ Total int64 `bson:"total"` }
+	if err := countCur.All(ctx, &countResult); err == nil && len(countResult) > 0 {
+		total = countResult[0].Total
+	}
+
 	return cur, total, nil
 }
 

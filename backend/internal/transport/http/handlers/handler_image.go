@@ -87,16 +87,22 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 		return
 	}
 
-	// Try to get image metadata
-	_, _, _, err = h.svc.GetMeta(c.Request.Context(), id)
+	// Get image source URL from metadata
+	sourceURL, err := h.svc.GetImageSourceURL(c.Request.Context(), id)
 	if err != nil {
 		// No image found, return 404
 		c.Status(http.StatusNotFound)
 		return
 	}
 
-	// For now, just return 404 since we don't actually store images
-	// Frontend will fallback to placeholder
+	// If we have a source URL (from URL upload), redirect to it
+	if sourceURL != nil && *sourceURL != "" {
+		c.Redirect(http.StatusFound, *sourceURL)
+		return
+	}
+
+	// For file uploads, we don't store the actual image data
+	// Return 404 so frontend uses placeholder
 	c.Status(http.StatusNotFound)
 }
 

@@ -77,13 +77,15 @@ export default {
 		const getRarityColor = (rarity) => RARITY_COLORS[rarity] || RARITY_COLORS[1]
 		const getRarityName = (rarity) => RARITY_NAMES[rarity] || RARITY_NAMES[1]
 
-		const truncateDescription = (description) => truncateText(description || 'Нет описания', 80)
+		const truncateDescription = (description) => truncateText(description, 80)
 
 		const getImageURL = (listing) => {
-			// Если есть source_url - используем его, иначе placeholder
+			// Для URL загрузок - используем source_url напрямую
 			if (listing.image?.source_url) {
 				return listing.image.source_url
 			}
+			// Для всех остальных случаев - placeholder
+			// (включая файловые загрузки, т.к. мы не храним сами файлы)
 			return goferPlaceholder
 		}
 

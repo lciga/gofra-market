@@ -250,3 +250,34 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"listings": result})
 }
+
+func (h *ListingHandler) GetMyGofers(c *gin.Context) {
+	v, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+	userID, ok := v.(primitive.ObjectID)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	gofers, err := h.svc.GetUserGofers(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	result := make([]map[string]interface{}, 0, len(gofers))
+	for _, gofer := range gofers {
+		result = append(result, map[string]interface{}{
+			"id":         gofer.ID.Hex(),
+			"name":       gofer.Name,
+			"rarity":     gofer.Rarity,
+			"created_at": gofer.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"gofers": result})
+}
