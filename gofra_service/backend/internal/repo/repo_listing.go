@@ -69,25 +69,27 @@ func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID
 // Используем $lookup для присоединения gofers, чтобы можно было фильтровать по gofer.name
 func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, skip int64, sort bson.D) (cur *mongo.Cursor, total int64, err error) {
 	// Build aggregation pipeline
-	pipeline := mongo.Pipeline{
-		// Stage 1: Lookup gofers
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "gofers"},
-			{Key: "localField", Value: "gofer_id"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "gofer"},
-		}}},
-		// Stage 2: Unwind gofer array (converts array to single object)
-		{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$gofer"},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
-		}}},
-	}
-
-	// Stage 3: Match with user filter (УЯЗВИМОСТЬ!)
+	pipeline := mongo.Pipeline{}
+	
+	// Stage 1: Match with user filter BEFORE lookup (УЯЗВИМОСТЬ!)
+	// Это позволяет фильтровать по полям коллекции listings (включая description)
 	if len(raw) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$match", Value: raw}})
 	}
+	
+	// Stage 2: Lookup gofers
+	pipeline = append(pipeline, bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "gofers"},
+		{Key: "localField", Value: "gofer_id"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "gofer"},
+	}}})
+	
+	// Stage 3: Unwind gofer array (converts array to single object)
+	pipeline = append(pipeline, bson.D{{Key: "$unwind", Value: bson.D{
+		{Key: "path", Value: "$gofer"},
+		{Key: "preserveNullAndEmptyArrays", Value: true},
+	}}})
 
 	// Stage 4: Sort
 	if len(sort) > 0 {
@@ -107,22 +109,24 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 	}
 
 	// Count total matching documents (before pagination)
-	countPipeline := mongo.Pipeline{
-		// Same lookup and unwind
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "gofers"},
-			{Key: "localField", Value: "gofer_id"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "gofer"},
-		}}},
-		{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$gofer"},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
-		}}},
-	}
+	countPipeline := mongo.Pipeline{}
+	
+	// Apply match BEFORE lookup for consistency
 	if len(raw) > 0 {
 		countPipeline = append(countPipeline, bson.D{{Key: "$match", Value: raw}})
 	}
+	
+	// Same lookup and unwind
+	countPipeline = append(countPipeline, bson.D{{Key: "$lookup", Value: bson.D{
+		{Key: "from", Value: "gofers"},
+		{Key: "localField", Value: "gofer_id"},
+		{Key: "foreignField", Value: "_id"},
+		{Key: "as", Value: "gofer"},
+	}}})
+	countPipeline = append(countPipeline, bson.D{{Key: "$unwind", Value: bson.D{
+		{Key: "path", Value: "$gofer"},
+		{Key: "preserveNullAndEmptyArrays", Value: true},
+	}}})
 	countPipeline = append(countPipeline, bson.D{{Key: "$count", Value: "total"}})
 
 	countCur, err := r.c.Aggregate(ctx, countPipeline)
