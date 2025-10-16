@@ -25,7 +25,19 @@ func NewServer(cfg *config.Config) *gin.Engine {
 	eng.Use(gin.Recovery())
 
 	corsConfig := cors.Config{
-		AllowOrigins:     cfg.AllowedOrigins,
+		AllowOriginFunc: func(origin string) bool {
+			// Если указаны конкретные origins, проверяем их
+			if len(cfg.AllowedOrigins) > 0 && cfg.AllowedOrigins[0] == "*" {
+				return true // Разрешаем все origins
+			}
+			// Иначе проверяем по списку
+			for _, allowed := range cfg.AllowedOrigins {
+				if origin == allowed {
+					return true
+				}
+			}
+			return false
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},

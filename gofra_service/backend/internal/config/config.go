@@ -46,10 +46,7 @@ func Load() *Config {
 		}
 	}
 	if len(cfg.AllowedOrigins) == 0 {
-		cfg.AllowedOrigins = []string{
-			"http://localhost:8081",
-			"http://localhost:8080",
-		}
+		cfg.AllowedOrigins = []string{"*"}
 	}
 
 	return cfg

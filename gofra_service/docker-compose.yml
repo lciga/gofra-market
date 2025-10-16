@@ -18,7 +18,7 @@ services:
     depends_on:
       - mongo
     environment:
-      MONGO_URL: "mongodb://mongo:27017"
+      MONGO_URL: "mongodb://admin:S3cr3tP4ssw0rd@mongo:27017"
       DB_NAME: "gofra"
       MONGO_USER: "admin"
       MONGO_PASSWORD: "S3cr3tP4ssw0rd"
@@ -26,7 +26,7 @@ services:
       GIN_MODE: debug
     ports:
       - "8080:8080"
-    restart: unless-stopped
+    restart: on-failure:5
 
   frontend:
     build:
