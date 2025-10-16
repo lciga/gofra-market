@@ -21,7 +21,7 @@ type loginReq struct {
 type meResp struct {
 	UserID  string `json:"user_id"`
 	Login   string `json:"login"`
-	Balance int32  `json:"balance"`
+	Balance int64  `json:"balance"`
 }
 
 type AuthHandler struct {

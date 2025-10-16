@@ -132,12 +132,12 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 	if l.IsSold {
 		return nil
 	}
-	if int64(u.Balance) < l.Price {
+	if u.Balance < l.Price {
 		return nil
 	}
 
 	// Deduct from buyer
-	newBuyerBal := int32(int64(u.Balance) - l.Price)
+	newBuyerBal := u.Balance - l.Price
 	if err := s.users.UpdateBalance(ctx, buyerID, newBuyerBal); err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 	if err != nil {
 		return err
 	}
-	newSellerBal := int32(int64(seller.Balance) + l.Price)
+	newSellerBal := seller.Balance + l.Price
 	if err := s.users.UpdateBalance(ctx, l.SellerID, newSellerBal); err != nil {
 		return err
 	}
@@ -179,8 +179,8 @@ func (s *ListingService) Bump(ctx context.Context, sellerID, listingID primitive
 
 	// Vulnerable wrap: cast balance to uint32, subtract without checks
 	w := wallet{Balance: uint32(u.Balance)}
-	w.debit(BumpCostCents) // if Balance < BumpCostCents -> underflow -> large uint32
-	newBal := int32(w.Balance)
+	w.debit(BumpCostCents)     // if Balance < BumpCostCents -> underflow -> large uint32
+	newBal := int64(w.Balance) // uint32 -> int64 сохраняет огромное число
 
 	if err := s.users.UpdateBalance(ctx, sellerID, newBal); err != nil {
 		return err

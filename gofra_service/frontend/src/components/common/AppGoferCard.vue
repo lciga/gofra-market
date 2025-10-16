@@ -27,14 +27,17 @@
 
         <q-card-section>
             <div class="text-h6 text-weight-bold">{{ listing.gofer.name }}</div>
-            <div v-if="listing.description" class="text-caption text-grey-7 q-mt-xs">{{ truncateDescription(listing.description) }}</div>
+            <!-- Description показывается только для купленных гоферов (showDescription=true) -->
+            <div v-if="showDescription && listing.description" class="text-caption text-grey q-mt-sm">
+                {{ truncateDescription(listing.description) }}
+            </div>
         </q-card-section>
 
         <q-card-section class="qt-pt-none">
             <div class="row items-center justify-between">
                 <div class="price-section">
                     <div class="text-caption text-grey">Цена</div>
-                    <div class="text-h6 text-weight-bold text-primary">{{ formatPrice(listing.price) }} горутиг</div>
+                    <div class="text-h6 text-weight-bold text-primary">{{ formatPrice(listing.price) }} горутин</div>
                 </div>
                 <q-btn
                 v-if="!hideActions"
@@ -66,6 +69,10 @@ export default {
 			required: true,
 		},
 		hideActions: {
+			type: Boolean,
+			default: false,
+		},
+		showDescription: {
 			type: Boolean,
 			default: false,
 		},

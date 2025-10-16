@@ -32,10 +32,7 @@
 
                     <q-separator class="q-mb-md"/>
 
-                    <div class="q-mb-lg">
-                        <div class="text-h6 q-mb-sm">Описание</div>
-                        <p class="text-body1">{{ listing.description }}</p>
-                    </div>
+                    <!-- Description скрыт, но подтягивается с бэка для NoSQL injection -->
 
                     <q-btn
                         color="primary"

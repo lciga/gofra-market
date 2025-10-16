@@ -5,7 +5,7 @@
       "properties": {
         "login": {"bsonType": "string", "minLength": 1, "maxLength": 64},
         "pass_hash": {"bsonType": "binData"},
-  "balance": {"bsonType": ["int", "long"], "minimum": 0},
+  "balance": {"bsonType": ["int", "long"]},
         "created_at": {"bsonType": "date"}
       }
     }}},

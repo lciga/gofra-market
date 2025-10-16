@@ -53,7 +53,7 @@ func (r *UserRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Use
 	return &user, err
 }
 
-func (r *UserRepo) UpdateBalance(ctx context.Context, id primitive.ObjectID, newBalance int32) error {
+func (r *UserRepo) UpdateBalance(ctx context.Context, id primitive.ObjectID, newBalance int64) error {
 	res, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"balance": newBalance}})
 	if err != nil {
 		return err

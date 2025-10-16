@@ -51,7 +51,7 @@
 
                             <div class="row q-col-gutter-md">
                                 <div v-for="listing in userListings" :key="listing.id" class="col-12 col-sm-6">
-                                    <app-gofer-card :listing="listing"/>
+                                    <app-gofer-card :listing="listing" :show-description="true"/>
                                 </div>
                             </div>
                         </q-tab-panel>
@@ -70,7 +70,7 @@
 
                             <div class="row q-col-gutter-md">
                                 <div v-for="listing in userPurchases" :key="listing.id" class="col-12 col-sm-6">
-                                    <app-gofer-card :listing="listing" :hide-actions="true"/>
+                                    <app-gofer-card :listing="listing" :hide-actions="true" :show-description="true"/>
                                 </div>
                             </div>
                         </q-tab-panel>

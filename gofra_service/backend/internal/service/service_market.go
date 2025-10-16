@@ -116,8 +116,10 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 			fetchedAt = &s
 		}
 
-		// Hide description for public market view (only visible to seller/buyer)
-		// NoSQL injection still works because it filters at DB level before this
+		// Description НЕ отдаём в ответе (скрываем от атакующих)
+		// НО NoSQL injection всё равно работает, потому что фильтрация идёт в БД
+		// Атакующий может фильтровать по description, но не видит его значение
+		// Это усложняет задачу: нужно использовать blind NoSQL injection
 		card := Card{
 			ID:          result.ID.Hex(),
 			GoferID:     result.GoferID.Hex(),
@@ -125,7 +127,7 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 			BuyerID:     buyerID,
 			Price:       result.Price,
 			IsSold:      result.IsSold,
-			Description: "", // Always hidden in market listing
+			Description: "", // Скрываем description (но фильтрация в БД работает!)
 			CreatedAt:   result.CreatedAt.Format(time.RFC3339),
 			Gofer: MarketGofer{
 				ID:     result.Gofer.ID.Hex(),
