@@ -16,6 +16,36 @@
             </div>
         </div>
 
+        <!-- Поиск -->
+        <q-card class="q-mb-md" flat bordered>
+            <q-card-section>
+                <div class="row q-col-gutter-md items-center">
+                    <div class="col">
+                        <q-input
+                            v-model="searchQuery"
+                            label="Поиск по имени гофера"
+                            outlined
+                            clearable
+                            @keyup.enter="handleSearch"
+                            hint="Введите имя гофера для поиска"
+                        >
+                            <template v-slot:prepend>
+                                <q-icon name="search" />
+                            </template>
+                        </q-input>
+                    </div>
+                    <div class="col-auto" style="padding-bottom: 22px;">
+                        <q-btn
+                            color="primary"
+                            label="Найти"
+                            @click="handleSearch"
+                            unelevated
+                        />
+                    </div>
+                </div>
+            </q-card-section>
+        </q-card>
+
         <gofer-filters />
 
         <q-inner-loading :showing="loading">
@@ -44,14 +74,24 @@
 </template>
 
 <script>
-import {computed, ref, onMounted} from 'vue'
-import {useStore} from 'vuex'
+import { computed, ref, onMounted, defineComponent } from 'vue'
+import { useStore } from 'vuex'
 
-export default {
+import AppGoferCard from '../components/common/AppGoferCard.vue'
+import GoferFilters from '../components/marketplace/GoferFilters.vue'
+import CreateListingModal from '../components/marketplace/CreateListingModal.vue'
+
+export default defineComponent({
     name: 'PageIndex',
+    components: {
+        AppGoferCard,
+        GoferFilters,
+        CreateListingModal,
+    },
     setup() {
         const store = useStore()
         const showCreateModal = ref(false)
+        const searchQuery = ref('')
 
         const loading = computed(() => store.state.listing.loading)
         const filteredListings = computed(() => store.getters['listing/filteredListings'])
@@ -64,12 +104,19 @@ export default {
             store.dispatch('listing/fetchListings')
         }
 
+        const handleSearch = () => {
+            store.commit('listing/SET_SEARCH_QUERY', searchQuery.value)
+            store.dispatch('listing/fetchListings')
+        }
+
         return {
             loading,
             filteredListings,
             showCreateModal,
-            handleListingCreated
+            searchQuery,
+            handleListingCreated,
+            handleSearch,
         }
-    }
-}
+    },
+})
 </script>

@@ -33,3 +33,17 @@ func (r *GoferRepo) TransferOwner(ctx context.Context, goferID, newOwnerID primi
 	_, err := r.c.UpdateOne(ctx, bson.M{"_id": goferID}, bson.M{"$set": bson.M{"owner_id": newOwnerID}})
 	return err
 }
+
+func (r *GoferRepo) ByOwner(ctx context.Context, ownerID primitive.ObjectID) ([]*domain.Gofer, error) {
+	cur, err := r.c.Find(ctx, bson.M{"owner_id": ownerID})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var gofers []*domain.Gofer
+	if err := cur.All(ctx, &gofers); err != nil {
+		return nil, err
+	}
+	return gofers, nil
+}

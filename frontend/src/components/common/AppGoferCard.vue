@@ -10,7 +10,7 @@
             :alt="listing.gofer.name"
             ratio="1"
             class="gofer-image"
-            placeholder-src="../../image/gofer-placeholder.png"
+            :placeholder-src="goferPlaceholder"
         >
             <template v-slot:error>
                 <div class="absolute-full flex flex-center bg-grey-3 text-grey-8">
@@ -18,7 +18,7 @@
                 </div>
             </template>
 
-            <div v-if="listing.is_sold" class="absolute-full flex flex-center bg-dak overlay-sold">
+            <div v-if="listing.is_sold && !hideActions" class="absolute-full flex flex-center bg-dak overlay-sold">
                 <q-icon name="mdi-cancel" size="xl" color="white"></q-icon>
                 <div class="text-h6 text-white q-mt-md">Продано</div>
             </div>
@@ -26,7 +26,7 @@
 
         <q-card-section>
             <div class="text-h6 text-weight-bold">{{ listing.gofer.name }}</div>
-            <div class="text-caption text-grey-7 q-mt-xs">{{ truncateDescription(listing.description) }}</div>
+            <div v-if="listing.description" class="text-caption text-grey-7 q-mt-xs">{{ truncateDescription(listing.description) }}</div>
         </q-card-section>
 
         <q-card-section class="qt-pt-none">
@@ -36,10 +36,11 @@
                     <div class="text-h6 text-weight-bold text-primary">{{ formatPrice(listing.price) }} горутиг</div>
                 </div>
                 <q-btn
+                v-if="!hideActions"
                 color="primary"
                 label="Купить"
                 :disabled="listing.is_sold || !isAuthenticated"
-                @click="handleBuy"
+                @click.stop="handleBuy"
                 >
                 </q-btn>
             </div>
@@ -48,59 +49,68 @@
 </template>
 
 <script>
-import {computed} from 'vue'
-import {useStore} from 'vuex'
-import {useRouter} from 'vue-router'
+import { computed } from 'vue'
+import { useStore } from 'vuex'
+import { useRouter } from 'vue-router'
 
+import goferPlaceholder from 'assets/gofer-placeholder.png'
 import { RARITY_COLORS, RARITY_NAMES } from '../../utils/constants'
 import { formatPrice, truncateText } from '../../utils/formatters'
 
 export default {
-    name:'AppGoferCard',
-    props: {
-        listing: {
-            type: Object,
-            required: true
-        }
-    },
-    setup(props) {
-        const store = useStore
-        const router = useRouter
+	name: 'AppGoferCard',
+	props: {
+		listing: {
+			type: Object,
+			required: true,
+		},
+		hideActions: {
+			type: Boolean,
+			default: false,
+		},
+	},
+	setup(props) {
+		const store = useStore()
+		const router = useRouter()
 
-        const isAuthenticated = computed(() => store.state.auth.isAuthenticated)
-        const getRarityColor = (rarity) => RARITY_COLORS[rarity] || RARITY_COLORS[1]
-        const getRarityName = (rarity) => RARITY_NAMES[rarity] || RARITY_NAMES[1]
+		const isAuthenticated = computed(() => store.state.auth.isAuthenticated)
+		const getRarityColor = (rarity) => RARITY_COLORS[rarity] || RARITY_COLORS[1]
+		const getRarityName = (rarity) => RARITY_NAMES[rarity] || RARITY_NAMES[1]
 
-        const truncateDescription = (description) => {
-            return truncateText(description || 'Нет описания', 80)
-        }
+		const truncateDescription = (description) => truncateText(description || 'Нет описания', 80)
 
-        const getImageURL = (listing) => {
-            return listing.image?.source_url || `/api/listings/${listing.id}/image` || '/placeholder-gofer.png'
-        }
+		const getImageURL = (listing) => {
+			// Если есть source_url - используем его, иначе placeholder
+			if (listing.image?.source_url) {
+				return listing.image.source_url
+			}
+			return goferPlaceholder
+		}
 
-        const handleBuy = async () => {
-            if (!isAuthenticated) {
-                router.push('/login')
-                return
-            }
-            try {
-                await store.dispatch('listings/buyListing', props.listing.id)
-                store.dispatch('auth/fetchProfile')
-            } catch (error) {
-                console.error('Purchase failed:', error)
-            }
-        }
-        return {
-            isAuthenticated,
-            getRarityColor,
-            getRarityName,
-            truncateDescription,
-            getImageURL,
-            formatPrice,
+		const handleBuy = async () => {
+			if (!isAuthenticated.value) {
+				router.push('/login')
+				return
+			}
+			try {
+				await store.dispatch('listing/buyListing', props.listing.id)
+				store.dispatch('auth/fetchProfile')
+			} catch (error) {
+				console.error('Purchase failed:', error)
+			}
+		}
+
+		return {
+			isAuthenticated,
+			getRarityColor,
+			getRarityName,
+			truncateDescription,
+			getImageURL,
+			formatPrice,
             handleBuy,
-        }
-    }
+            goferPlaceholder,
+		}
+	},
 }
 </script>
 

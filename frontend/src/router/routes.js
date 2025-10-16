@@ -20,17 +20,17 @@ const routes = [
         path: '/login',
         name: 'Login',
         component: () => import('pages/Login.vue'),
-        meta: {requiresAuth: true},
+        meta: {requiresGuest: true},
     },
     {
         path: '/register',
         name: 'Register',
         component: () => import('pages/Register.vue'),
-        meta: {requiresAuth: true},
+        meta: {requiresGuest: true},
     },
     {
         path: '/:catchAll(.*)*',
-        component: () => import('pages/404.vue')
+        component: () => import('pages/Error404.vue')
     },
 ]
 

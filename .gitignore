@@ -73,3 +73,27 @@ go.work.sum
 .vscode/
 
 *test.go
+
+.DS_Store
+node_modules/
+/dist
+/public
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.DS_Store
+.Thumbs.db
+*.sublime*
+.idea/
+debug.log
+
+ui/.vscode/
+
+node_modules/
+yarn.lock
+package-lock.json
+
+.eslintcache

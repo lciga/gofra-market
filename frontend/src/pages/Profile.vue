@@ -11,7 +11,7 @@
             <div class="col-12 col-md-4">
                 <q-card class="q-pa-md">
                     <div class="text-center">
-                        <q-avatar size="100px" color="primary" text-color="white" class="q-md-mb">
+                        <q-avatar size="100px" color="primary" text-color="white" class="q-mb-md">
                             {{ user.login?.charAt(0).toUpperCase() }}
                         </q-avatar>
                         <div class="text-h6">{{ user.login }}</div>
@@ -39,10 +39,10 @@
                     <q-tab-panels v-model="tab" animated>
                         <q-tab-panel name="listings">
                             <div v-if="userListings.length === 0" class="text-center q-py-xl">
-                                <q-icon name="mdi-pakage-variant" size="60" color="grey-4"/>
+                                <q-icon name="mdi-package-variant" size="60" color="grey-4"/>
                                 <div class="text-h6 q-mt-md text-grey">У вас нет листингов</div>
                                 <q-btn 
-                                    label="Создать ллистинг"
+                                    label="Создать листинг"
                                     color="primary"
                                     to="/"
                                     class="q-mt-md"
@@ -57,9 +57,21 @@
                         </q-tab-panel>
 
                         <q-tab-panel name="purchases">
-                            <div class="text-center q-py-xl">
-                                <div class="text-h6 text-grey">История покупок</div>
-                                <div class="text-caption">Здесь будут отображаться ваши покупки</div>
+                            <div v-if="userPurchases.length === 0" class="text-center q-py-xl">
+                                <q-icon name="mdi-cart-outline" size="60" color="grey-4"/>
+                                <div class="text-h6 q-mt-md text-grey">У вас пока нет покупок</div>
+                                <q-btn 
+                                    label="Перейти к покупкам"
+                                    color="primary"
+                                    to="/"
+                                    class="q-mt-md"
+                                />
+                            </div>
+
+                            <div class="row q-col-gutter-md">
+                                <div v-for="listing in userPurchases" :key="listing.id" class="col-12 col-sm-6">
+                                    <app-gofer-card :listing="listing" :hide-actions="true"/>
+                                </div>
                             </div>
                         </q-tab-panel>
                     </q-tab-panels>
@@ -70,34 +82,55 @@
 </template>
 
 <script>
-import {ref, computed, onMounted} from 'vue'
-import {useStore} from 'vuex'
-import { formatPrice } from '../utils/formatters'
+import { defineComponent, ref, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
 
-export default {
+import AppGoferCard from '../components/common/AppGoferCard.vue'
+import { formatPrice } from '../utils/formatters'
+import { listingAPI } from '../utils/api'
+
+export default defineComponent({
     name: 'PageProfile',
+    components: {
+        AppGoferCard,
+    },
     setup() {
-        const store = useStore
+        const store = useStore()
         const tab = ref('listings')
+        const myListings = ref([])
 
         const user = computed(() => store.state.auth.user || {})
-        const allListings = computed(() => store.state.listings.listings)
 
         const userListings = computed(() => {
             if (!user.value.user_id) return []
-            return allListings.value.filter(listing => listing.seller_id === user.value.user_id)
+            return myListings.value.filter((listing) => listing.seller_id === user.value.user_id && !listing.is_sold)
         })
 
+        const userPurchases = computed(() => {
+            if (!user.value.user_id) return []
+            return myListings.value.filter((listing) => listing.buyer_id === user.value.user_id && listing.is_sold)
+        })
+
+        const fetchMyListings = async () => {
+            try {
+                const response = await listingAPI.getMyListings()
+                myListings.value = response.data.listings || []
+            } catch (error) {
+                console.error('Failed to fetch my listings:', error)
+            }
+        }
+
         onMounted(() => {
-            store.dispatch('listings/fetchListings')
+            fetchMyListings()
         })
 
         return {
             tab,
             user,
             userListings,
-            formatPrice
+            userPurchases,
+            formatPrice,
         }
-    }
-}
+    },
+})
 </script>

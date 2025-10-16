@@ -3,8 +3,8 @@ services:
     image: mongo:latest
     container_name: gofra_mongo
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: "admin"
+      MONGO_INITDB_ROOT_PASSWORD: "S3cr3tP4ssw0rd"
     ports:
       - "27017:27017"
     volumes:
@@ -20,12 +20,25 @@ services:
     environment:
       MONGO_URL: "mongodb://mongo:27017"
       DB_NAME: "gofra"
-      MONGO_USER: ${MONGO_USER}
-      MONGO_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_USER: "admin"
+      MONGO_PASSWORD: "S3cr3tP4ssw0rd"
       SERVER_PORT: 8080
-      GIN_MODE: release
+      GIN_MODE: debug
     ports:
       - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gofra_frontend
+    depends_on:
+      - backend
+    environment:
+      - VIRTUAL_HOST=localhost
+    ports:
+      - "8081:80"
     restart: unless-stopped
 
 volumes:

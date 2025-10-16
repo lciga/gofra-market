@@ -10,7 +10,8 @@ import (
 )
 
 type createListingReq struct {
-	GoferID     string `json:"gofer_id" binding:"required"`
+	GoferName   string `json:"gofer_name" binding:"required"`
+	GoferRarity int    `json:"gofer_rarity" binding:"required"`
 	Price       int64  `json:"price" binding:"required"`
 	Description string `json:"description" binding:"required"`
 }
@@ -20,19 +21,29 @@ type buyReq struct {
 }
 
 type listingResp struct {
-	ID          string `json:"id"`
-	GoferID     string `json:"gofer_id"`
-	SellerID    string `json:"seller_id"`
-	Price       int64  `json:"price"`
-	IsSold      bool   `json:"is_sold"`
-	BuyerID     string `json:"buyer_id,omitempty"`
-	Description string `json:"description,omitempty"`
-	Image       struct {
-		ContentType        *string `json:"content_type"`
-		FetchedAt          *string `json:"fetched_at"`
-		DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"`
-	} `json:"image"`
-	CreatedAt string `json:"created_at"`
+	ID          string           `json:"id"`
+	GoferID     string           `json:"gofer_id"`
+	SellerID    string           `json:"seller_id"`
+	Price       int64            `json:"price"`
+	IsSold      bool             `json:"is_sold"`
+	BuyerID     string           `json:"buyer_id,omitempty"`
+	Description string           `json:"description,omitempty"`
+	Image       listingImageResp `json:"image"`
+	CreatedAt   string           `json:"created_at"`
+	Gofer       listingGoferResp `json:"gofer"`
+}
+
+type listingImageResp struct {
+	SourceURL          *string `json:"source_url,omitempty"`
+	ContentType        *string `json:"content_type,omitempty"`
+	FetchedAt          *string `json:"fetched_at,omitempty"`
+	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"`
+}
+
+type listingGoferResp struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Rarity int    `json:"rarity"`
 }
 
 type ListingHandler struct {
@@ -61,13 +72,7 @@ func (h *ListingHandler) Create(c *gin.Context) {
 		return
 	}
 
-	goferID, err := primitive.ObjectIDFromHex(req.GoferID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid gofer id"})
-		return
-	}
-
-	id, err := h.svc.Create(c.Request.Context(), sellerID, goferID, req.Price, req.Description)
+	id, err := h.svc.CreateWithGofer(c.Request.Context(), sellerID, req.GoferName, req.GoferRarity, req.Price, req.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -90,7 +95,7 @@ func (h *ListingHandler) Get(c *gin.Context) {
 		}
 	}
 
-	l, err := h.svc.Get(c.Request.Context(), id, requester)
+	l, g, err := h.svc.GetWithGofer(c.Request.Context(), id, requester)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -116,14 +121,16 @@ func (h *ListingHandler) Get(c *gin.Context) {
 		BuyerID:     buyerID,
 		Description: l.Description,
 		CreatedAt:   l.CreatedAt.Format(time.RFC3339),
+		Gofer: listingGoferResp{
+			ID:     g.ID.Hex(),
+			Name:   g.Name,
+			Rarity: g.Rarity,
+		},
 	}
-	if l.Image.ContentType != nil {
-		resp.Image.ContentType = l.Image.ContentType
-	}
+	resp.Image.SourceURL = l.Image.SourceURL
+	resp.Image.ContentType = l.Image.ContentType
 	resp.Image.FetchedAt = fetchedAt
-	if l.Image.DebugSnippet != nil {
-		resp.Image.DebugBase64Snippet = l.Image.DebugSnippet
-	}
+	resp.Image.DebugBase64Snippet = l.Image.DebugSnippet
 
 	// If requester is not seller or buyer, service.Get already zeroed Description
 	c.JSON(http.StatusOK, resp)
@@ -183,4 +190,63 @@ func (h *ListingHandler) Bump(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+func (h *ListingHandler) GetMyListings(c *gin.Context) {
+	v, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+	userID, ok := v.(primitive.ObjectID)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		return
+	}
+
+	listings, gofers, err := h.svc.GetUserListingsWithGofers(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Build response with full listing data including gofer info
+	var result []map[string]interface{}
+	for i, listing := range listings {
+		var buyerID string
+		if listing.BuyerID != primitive.NilObjectID {
+			buyerID = listing.BuyerID.Hex()
+		}
+
+		var fetchedAt *string
+		if listing.Image.FetchedAt != nil {
+			s := listing.Image.FetchedAt.Format(time.RFC3339)
+			fetchedAt = &s
+		}
+
+		item := map[string]interface{}{
+			"id":          listing.ID.Hex(),
+			"gofer_id":    listing.GoferID.Hex(),
+			"seller_id":   listing.SellerID.Hex(),
+			"buyer_id":    buyerID,
+			"price":       listing.Price,
+			"is_sold":     listing.IsSold,
+			"description": listing.Description,
+			"created_at":  listing.CreatedAt.Format(time.RFC3339),
+			"gofer": map[string]interface{}{
+				"id":     gofers[i].ID.Hex(),
+				"name":   gofers[i].Name,
+				"rarity": gofers[i].Rarity,
+			},
+			"image": map[string]interface{}{
+				"source_url":        listing.Image.SourceURL,
+				"content_type":      listing.Image.ContentType,
+				"fetched_at":        fetchedAt,
+				"debug_snippet_b64": listing.Image.DebugSnippet,
+			},
+		}
+		result = append(result, item)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"listings": result})
 }

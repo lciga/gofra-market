@@ -48,7 +48,7 @@ func (a *AuthService) Register(ctx context.Context, login, pass string) (user *d
 	user = &domain.User{
 		Login:     login,
 		PassHash:  hash,
-		Balance:   10000,
+		Balance:   int32(100),
 		CreatedAt: time.Now(),
 	}
 

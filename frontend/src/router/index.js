@@ -1,21 +1,26 @@
-import {createRouter, createWebHistory} from 'vue-router'
-import routers from './routes'
+import { createRouter, createWebHistory } from 'vue-router'
+import routes from './routes'
 import store from '../store'
 
 const router = createRouter({
-    history: createWebHistory(),
-    routers
+	history: createWebHistory(),
+	routes,
 })
 
 router.beforeEach((to, from, next) => {
     const isAuthenticated = store.state.auth.isAuthenticated
+
     if (to.meta.requiresAuth && !isAuthenticated) {
         next('/login')
-    } else if (to.meta.requiresAuth && isAuthenticated) {
-        next('/')
-    } else {
-        next()
+        return
     }
+
+    if (to.meta.requiresGuest && isAuthenticated) {
+        next('/')
+        return
+    }
+
+    next()
 })
 
 export default router

@@ -78,3 +78,81 @@ func (h *ImageHandler) GetMeta(c *gin.Context) {
 	resp := imageMetaResp{ContentType: ct, FetchedAt: atStr, DebugBase64Snippet: b64}
 	c.JSON(http.StatusOK, resp)
 }
+
+func (h *ImageHandler) GetImage(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	// Try to get image metadata
+	_, _, _, err = h.svc.GetMeta(c.Request.Context(), id)
+	if err != nil {
+		// No image found, return 404
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	// For now, just return 404 since we don't actually store images
+	// Frontend will fallback to placeholder
+	c.Status(http.StatusNotFound)
+}
+
+func (h *ImageHandler) UploadFile(c *gin.Context) {
+	// require authentication
+	if _, ok := c.Get("userID"); !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	// Get uploaded file
+	file, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no file uploaded"})
+		return
+	}
+
+	// Limit file size to 5MB
+	const maxSize = 5 * 1024 * 1024
+	if file.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file too large (max 5MB)"})
+		return
+	}
+
+	// Open file
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
+		return
+	}
+	defer f.Close()
+
+	// Read file content
+	data := make([]byte, file.Size)
+	if _, err := f.Read(data); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file content"})
+		return
+	}
+
+	// Store metadata
+	contentType := file.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	if err := h.svc.UploadFile(c.Request.Context(), id, contentType, data); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}

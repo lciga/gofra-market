@@ -4,6 +4,7 @@ import (
 	"Gofra_Market/internal/domain"
 	"Gofra_Market/internal/repo"
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -24,6 +25,41 @@ func NewListingService(u *repo.UserRepo, g *repo.GoferRepo, l *repo.ListingRepo)
 	return &ListingService{users: u, gofers: g, lists: l}
 }
 
+// CreateWithGofer creates a new gofer and listing in one transaction
+func (s *ListingService) CreateWithGofer(ctx context.Context, sellerID primitive.ObjectID, goferName string, goferRarity int, price int64, description string) (id primitive.ObjectID, err error) {
+	// Create new gofer
+	now := time.Now()
+
+	gofer := &domain.Gofer{
+		OwnerID:   sellerID,
+		Name:      goferName,
+		Rarity:    goferRarity,
+		CreatedAt: now,
+	}
+
+	if err := s.gofers.Create(ctx, gofer); err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	// Create listing with new gofer
+	l := &domain.Listing{
+		GoferID:     gofer.ID,
+		SellerID:    sellerID,
+		Price:       price,
+		IsSold:      false,
+		Description: description,
+		Image: domain.ImageMeta{
+			Kind: "upload", // Default kind, will be updated when image is uploaded
+		},
+		CreatedAt: gofer.CreatedAt,
+	}
+
+	if err := s.lists.Create(ctx, l); err != nil {
+		return primitive.NilObjectID, err
+	}
+	return l.ID, nil
+}
+
 // Проверка owner(goferID==sellerID), сбор Listing{...}, lists.Create()
 func (s *ListingService) Create(ctx context.Context, sellerID, goferID primitive.ObjectID, price int64, description string) (id primitive.ObjectID, err error) {
 	// verify gofer ownership
@@ -41,7 +77,10 @@ func (s *ListingService) Create(ctx context.Context, sellerID, goferID primitive
 		Price:       price,
 		IsSold:      false,
 		Description: description,
-		CreatedAt:   g.CreatedAt,
+		Image: domain.ImageMeta{
+			Kind: "upload", // Default kind, will be updated when image is uploaded
+		},
+		CreatedAt: g.CreatedAt,
 	}
 
 	if err := s.lists.Create(ctx, l); err != nil {
@@ -59,10 +98,26 @@ func (s *ListingService) Get(ctx context.Context, listingID primitive.ObjectID, 
 		l.Description = ""
 		return l, nil
 	}
-	if *requester != l.SellerID && (l.BuyerID == primitive.NilObjectID || *requester != l.BuyerID) {
+	// Show description only to seller OR buyer (if listing is sold)
+	isSeller := *requester == l.SellerID
+	isBuyer := l.IsSold && l.BuyerID != primitive.NilObjectID && *requester == l.BuyerID
+
+	if !isSeller && !isBuyer {
 		l.Description = ""
 	}
 	return l, nil
+}
+
+func (s *ListingService) GetWithGofer(ctx context.Context, listingID primitive.ObjectID, requester *primitive.ObjectID) (*domain.Listing, *domain.Gofer, error) {
+	l, err := s.Get(ctx, listingID, requester)
+	if err != nil {
+		return nil, nil, err
+	}
+	g, err := s.gofers.ByID(ctx, l.GoferID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return l, g, nil
 }
 
 func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.ObjectID) error {
@@ -77,14 +132,19 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 	if l.IsSold {
 		return nil
 	}
-	if u.Balance < l.Price {
+	if int64(u.Balance) < l.Price {
 		return nil
 	}
 
-	if err := s.users.UpdateBalance(ctx, buyerID, u.Balance-l.Price); err != nil {
+	newBal := int32(int64(u.Balance) - l.Price)
+	if err := s.users.UpdateBalance(ctx, buyerID, newBal); err != nil {
 		return err
 	}
 	if err := s.lists.SetSold(ctx, listingID, buyerID); err != nil {
+		return err
+	}
+	// Transfer gofer ownership to buyer
+	if err := s.gofers.TransferOwner(ctx, l.GoferID, buyerID); err != nil {
 		return err
 	}
 	return nil
@@ -108,10 +168,33 @@ func (s *ListingService) Bump(ctx context.Context, sellerID, listingID primitive
 	// Vulnerable wrap: cast balance to uint32, subtract without checks
 	w := wallet{Balance: uint32(u.Balance)}
 	w.debit(BumpCostCents) // if Balance < BumpCostCents -> underflow -> large uint32
-	u.Balance = int64(w.Balance)
+	newBal := int32(w.Balance)
 
-	if err := s.users.UpdateBalance(ctx, sellerID, u.Balance); err != nil {
+	if err := s.users.UpdateBalance(ctx, sellerID, newBal); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (s *ListingService) GetUserListings(ctx context.Context, userID primitive.ObjectID) ([]*domain.Listing, error) {
+	return s.lists.ByUser(ctx, userID)
+}
+
+func (s *ListingService) GetUserListingsWithGofers(ctx context.Context, userID primitive.ObjectID) ([]*domain.Listing, []*domain.Gofer, error) {
+	listings, err := s.lists.ByUser(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Fetch gofer info for each listing
+	gofers := make([]*domain.Gofer, len(listings))
+	for i, listing := range listings {
+		gofer, err := s.gofers.ByID(ctx, listing.GoferID)
+		if err != nil {
+			return nil, nil, err
+		}
+		gofers[i] = gofer
+	}
+
+	return listings, gofers, nil
 }

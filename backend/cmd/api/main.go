@@ -15,8 +15,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -38,6 +36,12 @@ func main() {
 	}
 	defer db.Close(client)
 
+	// seed initial data (only runs once)
+	if err := db.SeedInitialData(ctx, database); err != nil {
+		fmt.Fprintf(os.Stderr, "seed failed: %v\n", err)
+		// continue anyway, not critical
+	}
+
 	// create repos
 	usersColl := database.Collection("users")
 	gofersColl := database.Collection("gofers")
@@ -52,7 +56,7 @@ func main() {
 	// services
 	authSvc := service.NewAuthService(userRepo, sessionRepo, "sid")
 	listingSvc := service.NewListingService(userRepo, goferRepo, listingRepo)
-	marketSvc := service.NewMarketService(listingRepo)
+	marketSvc := service.NewMarketService(listingRepo, goferRepo)
 	imageSvc := service.NewImageService(listingRepo)
 
 	// handlers
@@ -61,10 +65,7 @@ func main() {
 	marketH := handlers.NewMarketHandler(marketSvc)
 	imageH := handlers.NewImageHandler(imageSvc)
 
-	gin.SetMode(cfg.GinMode)
-	engine := gin.New()
-	engine.Use(gin.Recovery())
-
+	engine := app.NewServer(cfg)
 	// attach middleware (session-based auth)
 	engine.Use(midleware.Auth(sessionRepo))
 

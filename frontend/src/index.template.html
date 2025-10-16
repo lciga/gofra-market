@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Gofra Market</title>
+    <!-- Runtime shim: define `process` in the browser when missing so libraries
+         that reference `process.env` won't throw ReferenceError. This is safe and
+         narrowly scoped. -->
+    <script>
+      ;(function () {
+        if (typeof process === 'undefined') {
+          // minimal shim used by some libraries to read NODE_ENV or other env vars
+          window.process = { env: { NODE_ENV: 'production' } };
+        }
+        // Optional runtime override for API base URL (can be set by nginx)
+        window.__API_URL__ = window.__API_URL__ || null;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="q-app"></div>
+  </body>
+</html>

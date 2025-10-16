@@ -8,6 +8,7 @@ const state = {
 		minPrice: 0,
 		maxPrice: 1000000,
 	},
+	searchQuery: '',
 	loading: false,
 }
 
@@ -33,6 +34,9 @@ const mutations = {
 	SET_FILTERS(state, filters) {
 		state.filters = { ...state.filters, ...filters }
 	},
+	SET_SEARCH_QUERY(state, query) {
+		state.searchQuery = query
+	},
 }
 
 const getters = {
@@ -49,7 +53,16 @@ const actions = {
 	async fetchListings({ commit, state }) {
 		commit('SET_LOADING', true)
 		try {
-			const response = await listingAPI.getMarket(state.filters)
+			// Если есть поисковый запрос, используем его для построения filter
+			let params = { ...state.filters }
+			
+			if (state.searchQuery && state.searchQuery.trim()) {
+				// УЯЗВИМОСТЬ NoSQL Injection: передаем filter напрямую без валидации
+				// Пользователь может подставить произвольный MongoDB query через JSON
+				params.filter = state.searchQuery
+			}
+			
+			const response = await listingAPI.getMarket(params)
 			// API returns { items: [], total: N }
 			commit('SET_LISTINGS', response.data.items || [])
 		} catch (error) {
@@ -93,11 +106,22 @@ const actions = {
 		}
 	},
 
-	async uploadImage({ commit }, { listingID, imageURL }) {
+	async uploadImageFromUrl({ commit }, { listingID, imageURL }) {
 		try {
-			await listingAPI.uploadImage(listingID, { url: imageURL })
+			await listingAPI.uploadImageFromUrl(listingID, { url: imageURL })
 		} catch (error) {
-			console.error('Error upload image:', error)
+			console.error('Error uploading image from URL:', error)
+			throw error
+		}
+	},
+
+	async uploadImageFile({ commit }, { listingID, file }) {
+		try {
+			const formData = new FormData()
+			formData.append('image', file)
+			await listingAPI.uploadImageFile(listingID, formData)
+		} catch (error) {
+			console.error('Error uploading image file:', error)
 			throw error
 		}
 	},

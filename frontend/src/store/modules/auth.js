@@ -1,6 +1,6 @@
 import { authAPI } from "../../utils/api"
 
-const status = {
+const state = {
     user: null,
     token: localStorage.getItem('token'),
     isAuthenticated: !!localStorage.getItem('token')
@@ -24,9 +24,9 @@ const mutations = {
 }
 
 const actions = {
-    async login({commit, dispatch}, credenials) {
+    async login({commit, dispatch}, credentials) {
         try {
-            const response = await authAPI.login(credenials)
+            const response = await authAPI.login(credentials)
             commit('SET_TOKEN', response.data.token)
             await dispatch('fetchProfile')
             return response
@@ -48,10 +48,14 @@ const actions = {
         }
     },
 
-    async fetchProfile({commit}) {
+    async fetchProfile({commit, state}) {
         try {
-            const response = await authAPI.getPorfile()
+            const response = await authAPI.getProfile()
             commit('SET_USER', response.data)
+            // Ensure isAuthenticated is set to true
+            if (!state.isAuthenticated && state.token) {
+                state.isAuthenticated = true
+            }
             return response
         } catch (error) {
             commit('LOGOUT')

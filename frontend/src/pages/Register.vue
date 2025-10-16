@@ -73,9 +73,10 @@ export default {
                 }) 
                 router.push('/')
             } catch (error) {
+                const errorMessage = error.response?.data?.error || error.message || 'Ошибка регистрации'
                 $q.notify({
                     type: 'negative',
-                    message: 'Ошибка регистрации'
+                    message: errorMessage
                 })
             } finally {
                 loading.value = false

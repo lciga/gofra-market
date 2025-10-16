@@ -7,7 +7,7 @@
         <div v-else-if="listing" class="row q-col-gutter-xl">
             <div class="col-12 col-md-6">
                 <q-card class="q-pa-md">
-                    <q-img :src="getImageURL(listing)" :alt="listing.gofer.name" ratio="1" class="rounded-borders" placeholder-src="../../image/gofer-placeholder.png">
+                    <q-img :src="getImageURL(listing)" :alt="listing.gofer.name" ratio="1" class="rounded-borders" :placeholder-src="goferPlaceholder">
                         <template v-slot="error">
                             <div class="absolute-full flex flex-center bg-grey-3 text-grey">
                                 <q-icon name="mdi-image-off" size="xl"/>
@@ -63,6 +63,7 @@ import { useStore } from 'vuex'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { formatPrice } from '../utils/formatters'
+import goferPlaceholder from '../assets/gofer-placeholder.png'
 
 export default {
     name: 'PageListingDetail',
@@ -77,7 +78,11 @@ export default {
         const isAuthenticated = computed(() => store.state.auth.isAuthenticated)
 
         const getImageURL = (listing) => {
-            return listing.image?.source_url || `/api/listings/${listing.id}/image` ||'../../image/gofer-placeholder.png'
+            // Если есть source_url - используем его, иначе placeholder
+            if (listing?.image?.source_url) {
+                return listing.image.source_url
+            }
+            return goferPlaceholder
         }
 
         const handleBuy = async () => {
@@ -87,23 +92,24 @@ export default {
             }
 
             try {
-                await store.dispatch('listings/buyListing', listing.value.id)
+                await store.dispatch('listing/buyListing', listing.value.id)
                 $q.notify({
                     type: 'positive',
                     message: 'Успешная покупка!'
                 })
                 router.push('/')
             } catch (error) {
+                const errorMessage = error.response?.data?.error || error.message || 'Ошибка при покупке'
                 $q.notify({
                     type: 'negative',
-                    message: 'Ошибка при покупке'
+                    message: errorMessage
                 })
             }
         }
 
         onMounted(async () => {
             try {
-                await store.dispatch('listings/fetchListing', route.params.id)
+                await store.dispatch('listing/fetchListing', route.params.id)
             } catch (error) {
                 console.error('Error loading listing', error)
             } finally {

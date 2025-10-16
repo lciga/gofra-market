@@ -5,16 +5,16 @@
       "properties": {
         "login": {"bsonType": "string", "minLength": 1, "maxLength": 64},
         "pass_hash": {"bsonType": "binData"},
-        "balance": {"bsonType": "int", "minimum": 0},
+  "balance": {"bsonType": ["int", "long"], "minimum": 0},
         "created_at": {"bsonType": "date"}
       }
     }}},
 
   { "create": "gofers", "validator": { "$jsonSchema": {
       "bsonType": "object",
-      "required": ["ovner_id", "name", "rarity", "created_at"],
+      "required": ["owner_id", "name", "rarity", "created_at"],
       "properties": {
-        "ovner_id": {"bsonType": "objectId"},
+        "owner_id": {"bsonType": "objectId"},
         "name": {"bsonType": "string", "minLength": 1, "maxLength": 64},
         "rarity": {"bsonType": "int", "minimum": 1, "maximum": 3},
         "created_at": {"bsonType": "date"}
@@ -23,11 +23,11 @@
 
   { "create": "listings", "validator": { "$jsonSchema": {
       "bsonType": "object",
-      "required": ["gofer_id", "seller_id", "price", "is_sold", "buyer_id", "description", "image", "created_at"],
+      "required": ["gofer_id", "seller_id", "price", "is_sold", "description", "image", "created_at"],
       "properties": {
         "gofer_id": {"bsonType": "objectId"},
         "seller_id": {"bsonType": "objectId"},
-        "price": {"bsonType": "int", "minimum": 0},
+        "price": {"bsonType": ["int", "long"], "minimum": 0},
         "is_sold": {"bsonType": "bool"},
         "buyer_id": {"bsonType": ["objectId", "null"]},
         "description": {"bsonType": "string", "minLength": 1, "maxLength": 256},

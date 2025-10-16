@@ -67,3 +67,24 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 	}
 	return cur, total, nil
 }
+
+func (r *ListingRepo) ByUser(ctx context.Context, userID primitive.ObjectID) ([]*domain.Listing, error) {
+	// Find all listings where user is seller OR buyer
+	filter := bson.M{
+		"$or": []bson.M{
+			{"seller_id": userID},
+			{"buyer_id": userID},
+		},
+	}
+	cur, err := r.c.Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "created_at", Value: -1}}))
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var listings []*domain.Listing
+	if err := cur.All(ctx, &listings); err != nil {
+		return nil, err
+	}
+	return listings, nil
+}

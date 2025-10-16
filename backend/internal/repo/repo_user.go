@@ -22,11 +22,17 @@ func NewUserRepo(c *mongo.Collection) *UserRepo {
 }
 
 func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
-	_, err := r.c.InsertOne(ctx, user)
+	res, err := r.c.InsertOne(ctx, user)
 	if mongo.IsDuplicateKeyError(err) {
 		return ErrLoginTaken
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	if oid, ok := res.InsertedID.(primitive.ObjectID); ok {
+		user.ID = oid
+	}
+	return nil
 }
 
 func (r *UserRepo) ByLogin(ctx context.Context, login string) (*domain.User, error) {
@@ -47,7 +53,7 @@ func (r *UserRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Use
 	return &user, err
 }
 
-func (r *UserRepo) UpdateBalance(ctx context.Context, id primitive.ObjectID, newBalance int64) error {
+func (r *UserRepo) UpdateBalance(ctx context.Context, id primitive.ObjectID, newBalance int32) error {
 	res, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"balance": newBalance}})
 	if err != nil {
 		return err

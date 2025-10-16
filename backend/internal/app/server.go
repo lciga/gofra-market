@@ -3,7 +3,9 @@ package app
 import (
 	"Gofra_Market/internal/config"
 	"Gofra_Market/internal/logger"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,16 +24,16 @@ func NewServer(cfg *config.Config) *gin.Engine {
 	eng.Use(gin.Logger())
 	eng.Use(gin.Recovery())
 
-	eng.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if c.Request.Method != "POST" && c.Request.Method != "GET" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
+	corsConfig := cors.Config{
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}
+
+	eng.Use(cors.New(corsConfig))
 
 	return eng
 }

@@ -59,4 +59,21 @@ func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID
 	return l.Image.ContentType, l.Image.DebugSnippet, l.Image.FetchedAt, nil
 }
 
+func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.ObjectID, contentType string, data []byte) error {
+	// Читаем первые 512 байт для отладочного сниппета
+	snippetSize := 512
+	if len(data) < snippetSize {
+		snippetSize = len(data)
+	}
+	snippet := data[:snippetSize]
+	b64s := base64.StdEncoding.EncodeToString(snippet)
+
+	ct := &contentType
+	at := timePtr(time.Now())
+	sourceURL := "uploaded_file"
+
+	// обновляем метаданные в базе
+	return s.list.UpdateImageMeta(ctx, listingID, sourceURL, ct, at, &b64s)
+}
+
 func timePtr(t time.Time) *time.Time { return &t }
