@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"Gofra_Market/internal/logger"
 	"Gofra_Market/internal/service"
 	"encoding/base64"
 	"net/http"
@@ -92,18 +93,23 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 	imageData, contentType, sourceURL, err := h.svc.GetImage(c.Request.Context(), id)
 	if err != nil {
 		// No image found, return 404
+		logger.Errorf("GetImage: listing not found: %s, error: %v", id.Hex(), err)
 		c.Status(http.StatusNotFound)
 		return
 	}
 
+	logger.Infof("GetImage: listing=%s hasSourceURL=%v hasImageData=%v", id.Hex(), sourceURL != nil, imageData != nil)
+
 	// If we have a source URL (from URL upload), redirect to it
 	if sourceURL != nil && *sourceURL != "" {
+		logger.Infof("GetImage: redirecting to source URL: %s", *sourceURL)
 		c.Redirect(http.StatusFound, *sourceURL)
 		return
 	}
 
 	// For file uploads, return the base64 decoded image data
 	if imageData != nil && *imageData != "" {
+		logger.Infof("GetImage: returning image data, size: %d", len(*imageData))
 		// Decode base64
 		decoded, err := base64.StdEncoding.DecodeString(*imageData)
 		if err != nil {
@@ -177,9 +183,13 @@ func (h *ImageHandler) UploadFile(c *gin.Context) {
 	}
 
 	if err := h.svc.UploadFile(c.Request.Context(), id, contentType, data); err != nil {
+		logger.Errorf("UploadFile: failed to upload image for listing %s: %v", id.Hex(), err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Log successful upload
+	logger.Infof("Successfully uploaded image for listing: %s, content-type: %s, size: %d", id.Hex(), contentType, len(data))
 
 	c.Status(http.StatusNoContent)
 }

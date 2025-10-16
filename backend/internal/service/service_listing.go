@@ -136,10 +136,22 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 		return nil
 	}
 
-	newBal := int32(int64(u.Balance) - l.Price)
-	if err := s.users.UpdateBalance(ctx, buyerID, newBal); err != nil {
+	// Deduct from buyer
+	newBuyerBal := int32(int64(u.Balance) - l.Price)
+	if err := s.users.UpdateBalance(ctx, buyerID, newBuyerBal); err != nil {
 		return err
 	}
+
+	// Add to seller
+	seller, err := s.users.ByID(ctx, l.SellerID)
+	if err != nil {
+		return err
+	}
+	newSellerBal := int32(int64(seller.Balance) + l.Price)
+	if err := s.users.UpdateBalance(ctx, l.SellerID, newSellerBal); err != nil {
+		return err
+	}
+
 	if err := s.lists.SetSold(ctx, listingID, buyerID); err != nil {
 		return err
 	}

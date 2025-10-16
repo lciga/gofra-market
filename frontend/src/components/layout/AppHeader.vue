@@ -2,8 +2,8 @@
     <q-header elevated class="bg-primary text-white">
         <q-toolbar>
             <q-toolbar-title class="cursor-pointer" @click="$router.push('/')">
-                <q-avatar>
-                    <img :src="goferPlaceholder" alt="Gofra Market" />
+                <q-avatar size="42px" class="q-mr-sm">
+                    <img :src="goferPlaceholder" alt="Gofra Market" style="object-fit: cover; width: 100%; height: 100%;" />
                 </q-avatar>
                 Gofra Market
             </q-toolbar-title>
@@ -26,7 +26,7 @@ import { computed, defineComponent } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import { formatPrice } from '../../utils/formatters'
-import goferPlaceholder from 'assets/gofer-placeholder.png'
+import goferPlaceholder from 'assets/icon.png'
 
 export default defineComponent({
     name: 'AppHeader',

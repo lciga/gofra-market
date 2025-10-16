@@ -64,9 +64,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { formatPrice } from '../utils/formatters'
 import goferPlaceholder from '../assets/gofer-placeholder.png'
+import AppRarityBadge from '../components/common/AppRarityBadge.vue'
 
 export default {
     name: 'PageListingDetail',
+    components: {
+        AppRarityBadge,
+    },
     setup() {
         const store = useStore()
         const route = useRoute()
@@ -78,12 +82,14 @@ export default {
         const isAuthenticated = computed(() => store.state.auth.isAuthenticated)
 
         const getImageURL = (listing) => {
-            // Для URL загрузок - используем source_url напрямую
-            if (listing?.image?.source_url) {
-                return listing.image.source_url
+            // Используем API эндпоинт для получения изображения
+            // Если есть изображение (source_url или uploaded file), бэкенд вернет его
+            // Иначе вернется 404 и покажется placeholder через slot:error
+            if (listing?.image && (listing.image.source_url || listing.image.content_type)) {
+                // Добавляем случайный параметр для обхода кеша браузера
+                const cacheBuster = Math.random().toString(36).substring(7)
+                return `http://localhost:8080/api/listings/${listing.id}/image?v=${cacheBuster}`
             }
-            // Для всех остальных случаев - placeholder
-            // (включая файловые загрузки, т.к. мы не храним сами файлы)
             return goferPlaceholder
         }
 
@@ -126,7 +132,8 @@ export default {
             isAuthenticated,
             getImageURL,
             formatPrice,
-            handleBuy
+            handleBuy,
+            goferPlaceholder
         }
     }
 }

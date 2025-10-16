@@ -11,6 +11,7 @@
             ratio="1"
             class="gofer-image"
             :placeholder-src="goferPlaceholder"
+            img-class="crossorigin-anonymous"
         >
             <template v-slot:error>
                 <div class="absolute-full flex flex-center bg-grey-3 text-grey-8">
@@ -84,7 +85,9 @@ export default {
 			// Если есть изображение (source_url или uploaded file), бэкенд вернет его
 			// Иначе вернется 404 и покажется placeholder через slot:error
 			if (listing.image && (listing.image.source_url || listing.image.content_type)) {
-				return `http://localhost:8080/api/listings/${listing.id}/image`
+				// Добавляем случайный параметр для обхода кеша браузера
+				const cacheBuster = Math.random().toString(36).substring(7)
+				return `http://localhost:8080/api/listings/${listing.id}/image?v=${cacheBuster}`
 			}
 			return goferPlaceholder
 		}
