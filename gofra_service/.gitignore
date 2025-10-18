@@ -83,17 +83,12 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
 .DS_Store
 .Thumbs.db
 *.sublime*
 .idea/
 debug.log
-
 ui/.vscode/
-
 node_modules/
 yarn.lock
-package-lock.json
-
 .eslintcache
