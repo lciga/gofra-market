@@ -70,13 +70,13 @@ func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID
 func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, skip int64, sort bson.D) (cur *mongo.Cursor, total int64, err error) {
 	// Build aggregation pipeline
 	pipeline := mongo.Pipeline{}
-	
+
 	// Stage 1: Match with user filter BEFORE lookup (УЯЗВИМОСТЬ!)
 	// Это позволяет фильтровать по полям коллекции listings (включая description)
 	if len(raw) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$match", Value: raw}})
 	}
-	
+
 	// Stage 2: Lookup gofers
 	pipeline = append(pipeline, bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "gofers"},
@@ -84,7 +84,7 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 		{Key: "foreignField", Value: "_id"},
 		{Key: "as", Value: "gofer"},
 	}}})
-	
+
 	// Stage 3: Unwind gofer array (converts array to single object)
 	pipeline = append(pipeline, bson.D{{Key: "$unwind", Value: bson.D{
 		{Key: "path", Value: "$gofer"},
@@ -110,12 +110,12 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 
 	// Count total matching documents (before pagination)
 	countPipeline := mongo.Pipeline{}
-	
+
 	// Apply match BEFORE lookup for consistency
 	if len(raw) > 0 {
 		countPipeline = append(countPipeline, bson.D{{Key: "$match", Value: raw}})
 	}
-	
+
 	// Same lookup and unwind
 	countPipeline = append(countPipeline, bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "gofers"},
@@ -147,6 +147,7 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 
 func (r *ListingRepo) ByUser(ctx context.Context, userID primitive.ObjectID) ([]*domain.Listing, error) {
 	// Find all listings where user is seller OR buyer
+	// This is used for "my-listings" endpoint to show both what I'm selling and what I bought
 	filter := bson.M{
 		"$or": []bson.M{
 			{"seller_id": userID},

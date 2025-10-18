@@ -31,9 +31,10 @@ def debug(err):
     """Для отладки можно раскомментировать"""
     pass
     # if isinstance(err, str):
-    #     err = Exception(err)
-    # traceback.print_exc()
-    # raise err
+    #     print(f"[DEBUG] {err}", file=sys.stderr)
+    # else:
+    #     print(f"[DEBUG] {err}", file=sys.stderr)
+    #     traceback.print_exc(file=sys.stderr)
 
 
 class GobraChecker:
@@ -360,13 +361,22 @@ class GobraChecker:
         market_items = self.search_market(session)
         # Маркет должен работать, даже если наш листинг там не виден
         
-        # 8. Проверяем работу получения листинга по ID
+        # 8. Проверяем работу get_my_gofers
+        my_gofers = self.get_my_gofers(session)
+        if len(my_gofers) == 0:
+            debug("User has no gofers after creating listing")
+            service_corrupt()
+        
+        # 9. Проверяем работу получения листинга по ID
         listing_data = self.get_listing_by_id(session, listing_id)
         if not listing_data:
             debug("Cannot get listing by id")
             service_corrupt()
         if listing_data.get("description") != flag:
             debug(f"Flag mismatch when getting by id: expected '{flag}', got '{listing_data.get('description')}'")
+            service_corrupt()
+        if listing_data.get("is_sold") == True:
+            debug("Listing is sold immediately after creation (from get by id)")
             service_corrupt()
 
     def check_flag(self, flag_id: str, flag: str):
@@ -390,10 +400,17 @@ class GobraChecker:
         
         user_id = user_info.get("user_id")
         
-        # 5. Получаем список своих листингов
+        # 5. КРИТИЧНО: Проверяем работу get_my_gofers (если роут отключен - будет ошибка)
+        my_gofers = self.get_my_gofers(session)
+        # У пользователя должен быть хотя бы один гофер (тот, что в листинге)
+        if len(my_gofers) == 0:
+            debug("User has no gofers")
+            service_corrupt()
+        
+        # 6. Получаем список своих листингов
         my_listings = self.get_my_listings(session)
         
-        # 6. Ищем листинг с нашим флагом
+        # 7. Ищем листинг с нашим флагом
         found_flag = False
         flag_listing = None
         for lst in my_listings:
@@ -410,18 +427,11 @@ class GobraChecker:
             debug(f"Flag not found in listings for user {username}")
             service_corrupt()
         
-        # 7. КРИТИЧНО: Проверяем, что листинг не был продан
+        # 8. КРИТИЧНО: Проверяем, что листинг не был продан
         # Если листинг продан (is_sold == True), значит кто-то купил гофера с флагом
         # и флаг скомпрометирован -> сервис corrupt
         if flag_listing.get("is_sold") == True:
             debug(f"Flag compromised: listing {flag_listing.get('id')} was sold to {flag_listing.get('buyer_id')}")
-            service_corrupt()
-        
-        # 8. Дополнительная проверка: получаем гоферов пользователя
-        my_gofers = self.get_my_gofers(session)
-        # У пользователя должен быть хотя бы один гофер (тот, что в листинге)
-        if len(my_gofers) == 0:
-            debug("User has no gofers")
             service_corrupt()
         
         # 9. Проверяем, что можем получить листинг по ID
@@ -440,6 +450,9 @@ class GobraChecker:
         if listing_data.get("is_sold") == True:
             debug(f"Flag compromised (from get by id): listing was sold")
             service_corrupt()
+        
+        # 10. Проверяем работу маркета
+        market_items = self.search_market(session)
 
 
 def main():

@@ -224,6 +224,14 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 			fetchedAt = &s
 		}
 
+		// Show description only to seller OR buyer (if listing is sold)
+		description := listing.Description
+		isSeller := listing.SellerID == userID
+		isBuyer := listing.IsSold && listing.BuyerID != primitive.NilObjectID && listing.BuyerID == userID
+		if !isSeller && !isBuyer {
+			description = ""
+		}
+
 		item := map[string]interface{}{
 			"id":          listing.ID.Hex(),
 			"gofer_id":    listing.GoferID.Hex(),
@@ -231,7 +239,7 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 			"buyer_id":    buyerID,
 			"price":       listing.Price,
 			"is_sold":     listing.IsSold,
-			"description": listing.Description,
+			"description": description,
 			"created_at":  listing.CreatedAt.Format(time.RFC3339),
 			"gofer": map[string]interface{}{
 				"id":     gofers[i].ID.Hex(),
