@@ -62,6 +62,7 @@ import { useQuasar } from 'quasar'
 import { formatPrice } from '../utils/formatters'
 import goferPlaceholder from '../assets/gofer-placeholder.png'
 import AppRarityBadge from '../components/common/AppRarityBadge.vue'
+import { API_URL } from '../utils/api'
 
 export default {
     name: 'PageListingDetail',
@@ -85,7 +86,7 @@ export default {
             if (listing?.image && (listing.image.source_url || listing.image.content_type)) {
                 // Добавляем случайный параметр для обхода кеша браузера
                 const cacheBuster = Math.random().toString(36).substring(7)
-                return `http://localhost:8080/api/listings/${listing.id}/image?v=${cacheBuster}`
+                return `${API_URL}/listings/${listing.id}/image?v=${cacheBuster}`
             }
             return goferPlaceholder
         }

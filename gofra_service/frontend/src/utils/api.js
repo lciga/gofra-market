@@ -1,12 +1,5 @@
 import axios from 'axios'
 
-// Resolve API URL in a browser-safe way. Some build setups don't replace
-// `process.env` and `process` can be undefined in the browser which causes
-// a ReferenceError. Use typeof check and allow overriding via
-// window.__API_URL__ for runtime configuration (optional).
-// Prefer a runtime override via window.__API_URL__ (useful in Docker/nginx).
-// Use bracket access for process['env'] to avoid bundlers/DefinePlugin replacing
-// the literal `process.env` token which can lead to `process is not defined` in the browser.
 const API_URL = window.__API_URL__ || (
 		(typeof process !== 'undefined' && process && process['env'] && process['env']['API_URL'])
 			? process['env']['API_URL']
@@ -17,6 +10,8 @@ const api = axios.create({
 	baseURL: API_URL,
 	withCredentials: true, // send cookies (sid) for session auth
 })
+
+export { API_URL }
 
 api.interceptors.request.use((config) => {
 	const token = localStorage.getItem('token')

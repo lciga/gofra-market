@@ -60,6 +60,7 @@ import { useRouter } from 'vue-router'
 import goferPlaceholder from 'assets/gofer-placeholder.png'
 import { RARITY_COLORS, RARITY_NAMES } from '../../utils/constants'
 import { formatPrice, truncateText } from '../../utils/formatters'
+import { API_URL } from '../../utils/api'
 
 export default {
 	name: 'AppGoferCard',
@@ -94,7 +95,7 @@ export default {
 			if (listing.image && (listing.image.source_url || listing.image.content_type)) {
 				// Добавляем случайный параметр для обхода кеша браузера
 				const cacheBuster = Math.random().toString(36).substring(7)
-				return `http://localhost:8080/api/listings/${listing.id}/image?v=${cacheBuster}`
+				return `${API_URL}/listings/${listing.id}/image?v=${cacheBuster}`
 			}
 			return goferPlaceholder
 		}
