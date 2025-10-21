@@ -18,7 +18,6 @@ func NewListingRepo(c *mongo.Collection) *ListingRepo {
 }
 
 func (r *ListingRepo) Create(ctx context.Context, l *domain.Listing) error {
-	// Generate ID if not set
 	if l.ID.IsZero() {
 		l.ID = primitive.NewObjectID()
 	}
@@ -36,14 +35,12 @@ func (r *ListingRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.
 }
 
 func (r *ListingRepo) SetSold(ctx context.Context, id, buyer primitive.ObjectID) error {
-	// set buyer_id and is_sold flag according to domain.Listing
 	update := bson.M{"$set": bson.M{"buyer_id": buyer, "is_sold": true}}
 	_, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, update)
 	return err
 }
 
 func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID, url *string, ct *string, at *time.Time, b64 *string, imageData *string) error {
-	// Update nested image fields to match domain.ImageMeta inside Listing.image
 	set := bson.M{}
 	if url != nil {
 		set["image.source_url"] = *url
@@ -65,19 +62,13 @@ func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID
 	return err
 }
 
-// Уязвимая функция: запрос кладётся прямо в агрегацию без валидации
-// Используем $lookup для присоединения gofers, чтобы можно было фильтровать по gofer.name
 func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, skip int64, sort bson.D) (cur *mongo.Cursor, total int64, err error) {
-	// Build aggregation pipeline
 	pipeline := mongo.Pipeline{}
 
-	// Stage 1: Match with user filter BEFORE lookup (УЯЗВИМОСТЬ!)
-	// Это позволяет фильтровать по полям коллекции listings (включая description)
 	if len(raw) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$match", Value: raw}})
 	}
 
-	// Stage 2: Lookup gofers
 	pipeline = append(pipeline, bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "gofers"},
 		{Key: "localField", Value: "gofer_id"},
@@ -85,38 +76,31 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 		{Key: "as", Value: "gofer"},
 	}}})
 
-	// Stage 3: Unwind gofer array (converts array to single object)
 	pipeline = append(pipeline, bson.D{{Key: "$unwind", Value: bson.D{
 		{Key: "path", Value: "$gofer"},
 		{Key: "preserveNullAndEmptyArrays", Value: true},
 	}}})
 
-	// Stage 4: Sort
 	if len(sort) > 0 {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: sort}})
 	}
 
-	// Stage 5: Pagination
 	pipeline = append(pipeline,
 		bson.D{{Key: "$skip", Value: skip}},
 		bson.D{{Key: "$limit", Value: limit}},
 	)
 
-	// Execute aggregation
 	cur, err = r.c.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Count total matching documents (before pagination)
 	countPipeline := mongo.Pipeline{}
 
-	// Apply match BEFORE lookup for consistency
 	if len(raw) > 0 {
 		countPipeline = append(countPipeline, bson.D{{Key: "$match", Value: raw}})
 	}
 
-	// Same lookup and unwind
 	countPipeline = append(countPipeline, bson.D{{Key: "$lookup", Value: bson.D{
 		{Key: "from", Value: "gofers"},
 		{Key: "localField", Value: "gofer_id"},
@@ -131,7 +115,7 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 
 	countCur, err := r.c.Aggregate(ctx, countPipeline)
 	if err != nil {
-		return cur, 0, nil // Return cursor but no count
+		return cur, 0, nil 
 	}
 	defer countCur.Close(ctx)
 
@@ -146,8 +130,6 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 }
 
 func (r *ListingRepo) ByUser(ctx context.Context, userID primitive.ObjectID) ([]*domain.Listing, error) {
-	// Find all listings where user is seller OR buyer
-	// This is used for "my-listings" endpoint to show both what I'm selling and what I bought
 	filter := bson.M{
 		"$or": []bson.M{
 			{"seller_id": userID},

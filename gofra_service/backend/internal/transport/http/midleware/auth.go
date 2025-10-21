@@ -11,12 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Достаёт cookie cfg.CookieName ("sid"), sess.BySID, проверяет expires_at,
-// кладёт userID в контекст: c.Set("userID", primitive.ObjectID)
-type ctxKey string // userID
+type ctxKey string 
 
-// SessionStore is the minimal interface used by the middleware. Using an interface
-// allows tests to inject a fake implementation.
 type SessionStore interface {
 	BySID(ctx context.Context, sid string) (*domain.Session, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
@@ -32,13 +28,11 @@ func Auth(sess SessionStore) gin.HandlerFunc {
 
 		s, err := sess.BySID(c.Request.Context(), cookie)
 		if err != nil {
-			// invalid session — ignore and continue as anonymous
 			c.Next()
 			return
 		}
 
 		if s.ExpiredAt.Before(time.Now()) {
-			// session expired
 			_ = sess.Delete(c.Request.Context(), s.ID)
 			http.SetCookie(c.Writer, &http.Cookie{Name: "sid", Value: "", MaxAge: -1, Path: "/"})
 			c.Next()

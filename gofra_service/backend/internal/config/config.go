@@ -1,4 +1,3 @@
-// Пакет содержит конфигурацию приложения. загружаемую из переменных окружения
 package config
 
 import (
@@ -9,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Структура для хранения конфигурации приложения
 type Config struct {
 	MongoURI       string
 	DBName         string
@@ -21,8 +19,6 @@ type Config struct {
 	AllowedOrigins []string
 }
 
-// Load загружает конфигурацию из переменных окружения.
-// Возвращает указатель на Config и ошибку.
 func Load() *Config {
 	_ = godotenv.Load()
 	cfg := &Config{}
@@ -36,7 +32,6 @@ func Load() *Config {
 	cfg.GinMode = os.Getenv("GIN_MODE")
 
 	if corsEnv := os.Getenv("CORS_ALLOWED_ORIGINS"); corsEnv != "" {
-		// split by comma and trim whitespace
 		parts := strings.Split(corsEnv, ",")
 		cfg.AllowedOrigins = make([]string, 0, len(parts))
 		for _, p := range parts {

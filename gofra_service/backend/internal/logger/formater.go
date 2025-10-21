@@ -17,7 +17,6 @@ func (f *ginLikeFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	ts := e.Time.Format("2006/01/02 - 15:04:05")
 	level := strings.ToUpper(e.Level.String())
 
-	// [APP] 2025/08/14 - 03:37:59 | INFO | message | k1=v1 k2=v2
 	b.WriteString("[APP] ")
 	b.WriteString(ts)
 	b.WriteString(" | ")

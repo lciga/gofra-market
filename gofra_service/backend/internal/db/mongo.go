@@ -1,4 +1,3 @@
-// Пакет для работы с БДСМ
 package db
 
 import (
@@ -22,7 +21,6 @@ import (
 //go:embed migration/*
 var migrationsFS embed.FS
 
-// Подключение к БД
 func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 	if cfg.MongoURI == "" {
 		return nil, nil, errors.New("Connect: empty MongoDB URI")
@@ -31,7 +29,6 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 		return nil, nil, errors.New("Connect: empty database name")
 	}
 
-	// Конфигурация клиента
 	clientOptions := options.Client().
 		ApplyURI(cfg.MongoURI).
 		SetRetryReads(true).
@@ -39,7 +36,6 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 		SetAppName("gofra-market")
 
 	if cfg.MongoUser != "" {
-		// Root user (created via MONGO_INITDB_ROOT_USERNAME) is stored in the "admin" database
 		clientOptions.SetAuth(options.Credential{
 			Username:   cfg.MongoUser,
 			Password:   cfg.MongoPassword,
@@ -47,7 +43,6 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 		})
 	}
 
-	// Подулючаемся с таймаутом
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -56,7 +51,6 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 		return nil, nil, fmt.Errorf("Connect: mongo.Connect: %w", err)
 	}
 
-	// Проверяем доступность
 	if err := client.Ping(ctx, readpref.Primary()); err != nil {
 		client.Disconnect(context.Background())
 		return nil, nil, fmt.Errorf("Connect: ping primary failed: %w", err)
@@ -65,13 +59,11 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 	return client, db, nil
 }
 
-// Выполнение миграции
 func Migrate(ctx context.Context, cfg *config.Config) error {
 	logger.Info("Starting MongoDB migration", logrus.Fields{
 		"db": cfg.DBName,
 	})
 
-	// Источник миграций (embed)
 	src, err := iofs.New(migrationsFS, "migration")
 	if err != nil {
 		logger.Error(fmt.Errorf("iofs.New failed: %w", err), logrus.Fields{
@@ -80,7 +72,6 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("iofs.New: %w", err)
 	}
 
-	// Для отладки — перечислим файлы в embed, чтобы понять что включено
 	if entries, err := migrationsFS.ReadDir("migration"); err != nil {
 		logger.Warnf("failed to read embedded migrations dir: %v", err)
 	} else {
@@ -91,7 +82,6 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		logger.Info("embedded migrations files", logrus.Fields{"files": names})
 	}
 
-	// Подключаемся к БД с таймаутом
 	connCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -112,7 +102,6 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("mongo.Connect: %w", err)
 	}
 
-	// Всегда попытаться корректно закрыть клиент
 	defer func() {
 		if err := client.Disconnect(context.Background()); err != nil {
 			logger.Error(fmt.Errorf("client.Disconnect failed: %w", err), logrus.Fields{"step": "client.Disconnect"})
@@ -121,15 +110,11 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		}
 	}()
 
-	// Ping — убеждаемся, что БД отвечает
 	if err := client.Ping(connCtx, readpref.Primary()); err != nil {
 		logger.Error(fmt.Errorf("ping primary failed: %w", err), logrus.Fields{"step": "ping"})
 		return fmt.Errorf("ping primary: %w", err)
 	}
 
-	// Драйвер migrate
-	// Transactions are only supported on replica set members or mongos.
-	// Disable TransactionMode for standalone servers (common in local docker setups).
 	driver, err := mgm.WithInstance(client, &mgm.Config{
 		DatabaseName:         cfg.DBName,
 		MigrationsCollection: "gofra",
@@ -152,7 +137,6 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		}
 	}()
 
-	// Прогоняем вверх
 	if err := m.Up(); err != nil {
 		if err == migrate.ErrNoChange {
 			logger.Info("Mongo migration: up to date")
@@ -166,7 +150,6 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
-// Штатное закрытие соединения
 func Close(client *mongo.Client) error {
 	if client == nil {
 		return nil

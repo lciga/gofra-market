@@ -8,7 +8,7 @@ const API_URL = window.__API_URL__ || (
 
 const api = axios.create({
 	baseURL: API_URL,
-	withCredentials: true, // send cookies (sid) for session auth
+	withCredentials: true, 
 })
 
 export { API_URL }

@@ -53,21 +53,13 @@ const actions = {
 	async fetchListings({ commit, state }) {
 		commit('SET_LOADING', true)
 		try {
-			// Если есть поисковый запрос, используем его для построения filter
 			let params = { ...state.filters }
 			
 			if (state.searchQuery && state.searchQuery.trim()) {
-				// УЯЗВИМОСТЬ NoSQL Injection: передаем filter напрямую без валидации
-				// Пользователь может подставить произвольный MongoDB query через JSON
-				// Если это выглядит как JSON (начинается с { или [), передаем как есть
-				// Иначе оборачиваем в поиск по имени гофера
 				const query = state.searchQuery.trim()
 				if (query.startsWith('{') || query.startsWith('[')) {
-					// Уже JSON - передаем напрямую (уязвимость!)
 					params.filter = query
 				} else {
-					// Простой текстовый поиск - ищем по имени гофера с regex
-					// Но всё равно можем добавить MongoDB operators в строку!
 					params.filter = JSON.stringify({ 
 						"gofer.name": { "$regex": query, "$options": "i" } 
 					})
@@ -75,7 +67,6 @@ const actions = {
 			}
 			
 			const response = await listingAPI.getMarket(params)
-			// API returns { items: [], total: N }
 			commit('SET_LISTINGS', response.data.items || [])
 		} catch (error) {
 			console.error('Error fetching listings:', error)
@@ -98,7 +89,6 @@ const actions = {
 	async createListing({ commit, dispatch }, listingData) {
 		try {
 			const response = await listingAPI.createListing(listingData)
-			// Refresh listings to get complete data with gofer info
 			await dispatch('fetchListings')
 			await dispatch('auth/fetchProfile', null, { root: true })
 			return response
@@ -111,7 +101,6 @@ const actions = {
 	async buyListing({ commit, dispatch }, listingID) {
 		try {
 			await listingAPI.buy({ listing_id: listingID })
-			// Refresh both current listing and main listings list
 			await dispatch('fetchListing', listingID)
 			await dispatch('fetchListings')
 			await dispatch('auth/fetchProfile', null, { root: true })

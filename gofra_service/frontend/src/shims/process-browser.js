@@ -1,6 +1,3 @@
-// Minimal, side-effect free browser shim for `process`.
-// This avoids referencing `process` while defining the shim itself
-// so bundlers like Webpack/Vite can safely inject it.
 const defaultEnv = {
 	NODE_ENV: 'production',
 	API_URL: 'http://localhost:8080/api',
@@ -15,7 +12,6 @@ const existingEnv = existingProcess && typeof existingProcess.env === 'object'
 	: null
 
 const env = Object.assign({}, defaultEnv, existingEnv || {}, {
-	// Allow runtime override via window.__API_URL__ if provided by hosting env
 	API_URL:
 		typeof globalObject !== 'undefined' &&
 		globalObject.__API_URL__ &&

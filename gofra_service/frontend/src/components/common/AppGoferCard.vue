@@ -27,7 +27,6 @@
 
         <q-card-section>
             <div class="text-h6 text-weight-bold">{{ listing.gofer.name }}</div>
-            <!-- Description показывается только для купленных гоферов (showDescription=true) -->
             <div v-if="showDescription && listing.description" class="text-caption text-grey q-mt-sm">
                 {{ truncateDescription(listing.description) }}
             </div>
@@ -89,11 +88,7 @@ export default {
 		const truncateDescription = (description) => truncateText(description, 80)
 
 		const getImageURL = (listing) => {
-			// Используем API эндпоинт для получения изображения
-			// Если есть изображение (source_url или uploaded file), бэкенд вернет его
-			// Иначе вернется 404 и покажется placeholder через slot:error
 			if (listing.image && (listing.image.source_url || listing.image.content_type)) {
-				// Добавляем случайный параметр для обхода кеша браузера
 				const cacheBuster = Math.random().toString(36).substring(7)
 				return `${API_URL}/listings/${listing.id}/image?v=${cacheBuster}`
 			}

@@ -1,4 +1,3 @@
-// Набор моделей
 package domain
 
 import (
@@ -7,11 +6,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Модель гофера
 type Gofer struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty"` // Уникальный идентификатор
-	OwnerID   primitive.ObjectID `bson:"owner_id"`      // Идентификатор владельца
-	Name      string             `bson:"name"`          // Имя гофера
-	Rarity    int                `bson:"rarity"`        // Редкость гофера
-	CreatedAt time.Time          `bson:"created_at"`    // Время создания
+	ID        primitive.ObjectID `bson:"_id,omitempty"` 
+	OwnerID   primitive.ObjectID `bson:"owner_id"`      
+	Name      string             `bson:"name"`          
+	Rarity    int                `bson:"rarity"`        
+	CreatedAt time.Time          `bson:"created_at"`   
 }

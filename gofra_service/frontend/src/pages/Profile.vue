@@ -126,7 +126,6 @@ export default defineComponent({
             fetchMyListings()
         })
 
-        // Watch route to refresh when user navigates to profile page
         watch(
             () => route.path,
             (newPath) => {

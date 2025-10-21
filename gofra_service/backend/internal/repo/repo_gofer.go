@@ -16,7 +16,6 @@ func NewGoferRepo(c *mongo.Collection) *GoferRepo {
 }
 
 func (r *GoferRepo) Create(ctx context.Context, g *domain.Gofer) error {
-	// Generate ID if not set
 	if g.ID.IsZero() {
 		g.ID = primitive.NewObjectID()
 	}

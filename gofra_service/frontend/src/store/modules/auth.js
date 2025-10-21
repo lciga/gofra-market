@@ -52,7 +52,6 @@ const actions = {
         try {
             const response = await authAPI.getProfile()
             commit('SET_USER', response.data)
-            // Ensure isAuthenticated is set to true
             if (!state.isAuthenticated && state.token) {
                 state.isAuthenticated = true
             }

@@ -32,8 +32,6 @@
 
                     <q-separator class="q-mb-md"/>
 
-                    <!-- Description скрыт, но подтягивается с бэка для NoSQL injection -->
-
                     <q-btn
                         color="primary"
                         size="lg"
@@ -80,11 +78,7 @@ export default {
         const isAuthenticated = computed(() => store.state.auth.isAuthenticated)
 
         const getImageURL = (listing) => {
-            // Используем API эндпоинт для получения изображения
-            // Если есть изображение (source_url или uploaded file), бэкенд вернет его
-            // Иначе вернется 404 и покажется placeholder через slot:error
             if (listing?.image && (listing.image.source_url || listing.image.content_type)) {
-                // Добавляем случайный параметр для обхода кеша браузера
                 const cacheBuster = Math.random().toString(36).substring(7)
                 return `${API_URL}/listings/${listing.id}/image?v=${cacheBuster}`
             }
@@ -103,7 +97,6 @@ export default {
                     type: 'positive',
                     message: 'Успешная покупка!'
                 })
-                // Navigate to home page (listings will be refreshed automatically)
                 await router.push('/')
             } catch (error) {
                 const errorMessage = error.response?.data?.error || error.message || 'Ошибка при покупке'

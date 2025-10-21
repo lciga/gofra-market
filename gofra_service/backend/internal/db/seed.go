@@ -14,12 +14,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// SeedInitialData создаёт начальные данные: пользователя и 5 листингов разной редкости
-// Выполняется только один раз (проверяет наличие маркера в метаданных)
 func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 	logger.Info("Checking if initial seed is needed", logrus.Fields{})
 
-	// Проверяем маркер в служебной коллекции
 	metaColl := db.Collection("_seed_meta")
 	var meta bson.M
 	err := metaColl.FindOne(ctx, bson.M{"_id": "initial_seed"}).Decode(&meta)
@@ -33,12 +30,10 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 
 	logger.Info("Applying initial seed data", logrus.Fields{})
 
-	// Создаём системного пользователя (продавца)
 	usersColl := db.Collection("users")
 	gofersColl := db.Collection("gofers")
 	listingsColl := db.Collection("listings")
 
-	// Хешируем пароль для системного пользователя
 	passHash, err := bcrypt.GenerateFromPassword([]byte("system123"), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hashing password: %w", err)
@@ -48,7 +43,7 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 		ID:        primitive.NewObjectID(),
 		Login:     "system_seller",
 		PassHash:  passHash,
-		Balance:   100, // 10000 горутинов
+		Balance:   100,
 		CreatedAt: time.Now(),
 	}
 
@@ -58,7 +53,6 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 
 	logger.Info("Created system user", logrus.Fields{"login": systemUser.Login, "id": systemUser.ID.Hex()})
 
-	// Создаём 5 гоферов разной редкости
 	goferNames := []struct {
 		name   string
 		rarity int
@@ -84,7 +78,6 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 			return fmt.Errorf("inserting gofer %s: %w", gofer.Name, err)
 		}
 
-		// Создаём листинг для этого гофера
 		listing := domain.Listing{
 			ID:          primitive.NewObjectID(),
 			GoferID:     gofer.ID,
@@ -111,7 +104,6 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 		})
 	}
 
-	// Сохраняем маркер что seed выполнен
 	seedMeta := bson.M{
 		"_id":        "initial_seed",
 		"applied_at": time.Now(),

@@ -132,7 +132,6 @@ func (h *ListingHandler) Get(c *gin.Context) {
 	resp.Image.FetchedAt = fetchedAt
 	resp.Image.DebugBase64Snippet = l.Image.DebugSnippet
 
-	// If requester is not seller or buyer, service.Get already zeroed Description
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -210,7 +209,6 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 		return
 	}
 
-	// Build response with full listing data including gofer info
 	var result []map[string]interface{}
 	for i, listing := range listings {
 		var buyerID string
@@ -224,7 +222,6 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 			fetchedAt = &s
 		}
 
-		// Show description only to seller OR buyer (if listing is sold)
 		description := listing.Description
 		isSeller := listing.SellerID == userID
 		isBuyer := listing.IsSold && listing.BuyerID != primitive.NilObjectID && listing.BuyerID == userID

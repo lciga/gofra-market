@@ -25,7 +25,6 @@ func NewAuthService(u *repo.UserRepo, s *repo.SessionRepo, c string) *AuthServic
 	return &AuthService{users: u, sessions: s, cookie: c}
 }
 
-// generateSID returns a securely generated random hex string of length 64 (32 bytes).
 func generateSID() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

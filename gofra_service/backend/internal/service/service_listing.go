@@ -25,9 +25,7 @@ func NewListingService(u *repo.UserRepo, g *repo.GoferRepo, l *repo.ListingRepo)
 	return &ListingService{users: u, gofers: g, lists: l}
 }
 
-// CreateWithGofer creates a new gofer and listing in one transaction
 func (s *ListingService) CreateWithGofer(ctx context.Context, sellerID primitive.ObjectID, goferName string, goferRarity int, price int64, description string) (id primitive.ObjectID, err error) {
-	// Create new gofer
 	now := time.Now()
 
 	gofer := &domain.Gofer{
@@ -41,7 +39,6 @@ func (s *ListingService) CreateWithGofer(ctx context.Context, sellerID primitive
 		return primitive.NilObjectID, err
 	}
 
-	// Create listing with new gofer
 	l := &domain.Listing{
 		GoferID:     gofer.ID,
 		SellerID:    sellerID,
@@ -49,7 +46,7 @@ func (s *ListingService) CreateWithGofer(ctx context.Context, sellerID primitive
 		IsSold:      false,
 		Description: description,
 		Image: domain.ImageMeta{
-			Kind: "upload", // Default kind, will be updated when image is uploaded
+			Kind: "upload",
 		},
 		CreatedAt: gofer.CreatedAt,
 	}
@@ -60,9 +57,7 @@ func (s *ListingService) CreateWithGofer(ctx context.Context, sellerID primitive
 	return l.ID, nil
 }
 
-// Проверка owner(goferID==sellerID), сбор Listing{...}, lists.Create()
 func (s *ListingService) Create(ctx context.Context, sellerID, goferID primitive.ObjectID, price int64, description string) (id primitive.ObjectID, err error) {
-	// verify gofer ownership
 	g, err := s.gofers.ByID(ctx, goferID)
 	if err != nil {
 		return primitive.NilObjectID, err
@@ -78,7 +73,7 @@ func (s *ListingService) Create(ctx context.Context, sellerID, goferID primitive
 		IsSold:      false,
 		Description: description,
 		Image: domain.ImageMeta{
-			Kind: "upload", // Default kind, will be updated when image is uploaded
+			Kind: "upload", 
 		},
 		CreatedAt: g.CreatedAt,
 	}
@@ -98,7 +93,6 @@ func (s *ListingService) Get(ctx context.Context, listingID primitive.ObjectID, 
 		l.Description = ""
 		return l, nil
 	}
-	// Show description only to seller OR buyer (if listing is sold)
 	isSeller := *requester == l.SellerID
 	isBuyer := l.IsSold && l.BuyerID != primitive.NilObjectID && *requester == l.BuyerID
 
@@ -136,13 +130,11 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 		return nil
 	}
 
-	// Deduct from buyer
 	newBuyerBal := u.Balance - l.Price
 	if err := s.users.UpdateBalance(ctx, buyerID, newBuyerBal); err != nil {
 		return err
 	}
 
-	// Add to seller
 	seller, err := s.users.ByID(ctx, l.SellerID)
 	if err != nil {
 		return err
@@ -155,7 +147,6 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 	if err := s.lists.SetSold(ctx, listingID, buyerID); err != nil {
 		return err
 	}
-	// Transfer gofer ownership to buyer
 	if err := s.gofers.TransferOwner(ctx, l.GoferID, buyerID); err != nil {
 		return err
 	}
@@ -163,7 +154,6 @@ func (s *ListingService) Buy(ctx context.Context, buyerID, listingID primitive.O
 }
 
 func (s *ListingService) Bump(ctx context.Context, sellerID, listingID primitive.ObjectID) error {
-	// load listing and check seller
 	l, err := s.lists.ByID(ctx, listingID)
 	if err != nil {
 		return err
@@ -177,10 +167,9 @@ func (s *ListingService) Bump(ctx context.Context, sellerID, listingID primitive
 		return err
 	}
 
-	// Vulnerable wrap: cast balance to uint32, subtract without checks
 	w := wallet{Balance: uint32(u.Balance)}
-	w.debit(BumpCostCents)     // if Balance < BumpCostCents -> underflow -> large uint32
-	newBal := int64(w.Balance) // uint32 -> int64 сохраняет огромное число
+	w.debit(BumpCostCents)     
+	newBal := int64(w.Balance) 
 
 	if err := s.users.UpdateBalance(ctx, sellerID, newBal); err != nil {
 		return err
@@ -198,7 +187,6 @@ func (s *ListingService) GetUserListingsWithGofers(ctx context.Context, userID p
 		return nil, nil, err
 	}
 
-	// Fetch gofer info for each listing
 	gofers := make([]*domain.Gofer, len(listings))
 	for i, listing := range listings {
 		gofer, err := s.gofers.ByID(ctx, listing.GoferID)

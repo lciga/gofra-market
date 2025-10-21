@@ -14,14 +14,12 @@ type Handlers struct {
 }
 
 func RegisterRoutes(e *gin.Engine, h Handlers) {
-	// public
 	e.POST("/api/register", h.Auth.Register)
 	e.POST("/api/login", h.Auth.Login)
 	e.GET("/api/market", h.Market.Search)
 	e.GET("/api/listings/:id", h.Listing.Get)
 	e.GET("/api/listings/:id/image", h.Image.GetImage)
 
-	// protected (middleware should set userID in context)
 	api := e.Group("/api")
 	api.GET("/me", h.Auth.Me)
 	api.GET("/my-listings", h.Listing.GetMyListings)

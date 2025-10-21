@@ -16,7 +16,6 @@
             </div>
         </div>
 
-        <!-- Поиск -->
         <q-card class="q-mb-md" flat bordered>
             <q-card-section>
                 <div class="row q-col-gutter-md items-center">

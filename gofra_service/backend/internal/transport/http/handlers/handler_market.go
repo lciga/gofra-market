@@ -8,8 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GET /api/market?filter=<rawJSON>&page=1&limit=20&sort=price_asc
-
 type MarketHandler struct{ svc *service.MarketService }
 
 func NewMarketHandler(s *service.MarketService) *MarketHandler {

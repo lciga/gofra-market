@@ -169,15 +169,12 @@ export default {
                 const response = await store.dispatch('listing/createListing', form.value)
                 const listingID = response.data.id
 
-                // Upload image if provided
                 if (imageUploadMethod.value === 'url' && form.value.image_url) {
-                    // SSRF vulnerability: URL загрузка без валидации
                     await store.dispatch('listing/uploadImageFromUrl', {
                         listingID,
                         imageURL: form.value.image_url,
                     })
                 } else if (imageUploadMethod.value === 'file' && form.value.image_file) {
-                    // Upload file
                     await store.dispatch('listing/uploadImageFile', {
                         listingID,
                         file: form.value.image_file,
@@ -189,7 +186,6 @@ export default {
                     message: 'Листинг успешно создан',
                 })
 
-                // Refresh listings after image upload completes
                 await store.dispatch('listing/fetchListings')
                 
                 emit('created')

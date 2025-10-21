@@ -57,7 +57,6 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 		raw = map[string]any{}
 	}
 
-	// sanitize pagination
 	if limit <= 0 {
 		limit = 20
 	}
@@ -70,7 +69,6 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 	skip := int64((page - 1) * limit)
 	lim := int64(limit)
 
-	// sort
 	var sortDoc bson.D
 	switch strings.ToLower(sort) {
 	case "price_asc":
@@ -87,11 +85,9 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 	}
 	defer cur.Close(ctx)
 
-	cards = []Card{} // Initialize empty slice
+	cards = []Card{}
 
-	// iterate cursor - now includes gofer from $lookup
 	for cur.Next(ctx) {
-		// Decode aggregation result which has embedded gofer
 		var result struct {
 			domain.Listing `bson:",inline"`
 			Gofer          *domain.Gofer `bson:"gofer"`
@@ -100,7 +96,6 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 			return nil, 0, err
 		}
 
-		// Skip if gofer is missing (shouldn't happen with lookup)
 		if result.Gofer == nil {
 			continue
 		}
@@ -116,10 +111,6 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 			fetchedAt = &s
 		}
 
-		// Description НЕ отдаём в ответе (скрываем от атакующих)
-		// НО NoSQL injection всё равно работает, потому что фильтрация идёт в БД
-		// Атакующий может фильтровать по description, но не видит его значение
-		// Это усложняет задачу: нужно использовать blind NoSQL injection
 		card := Card{
 			ID:          result.ID.Hex(),
 			GoferID:     result.GoferID.Hex(),
@@ -127,7 +118,7 @@ func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit,
 			BuyerID:     buyerID,
 			Price:       result.Price,
 			IsSold:      result.IsSold,
-			Description: "", // Скрываем description (но фильтрация в БД работает!)
+			Description: "",
 			CreatedAt:   result.CreatedAt.Format(time.RFC3339),
 			Gofer: MarketGofer{
 				ID:     result.Gofer.ID.Hex(),

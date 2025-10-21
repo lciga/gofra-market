@@ -21,8 +21,6 @@ func NewImageService(l *repo.ListingRepo) *ImageService {
 }
 
 func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.ObjectID, url string) error {
-	// >>> УЯЗВИМОСТЬ SSRF: делаем GET по произвольному URL без каких-либо ограничений
-	// Нельзя запретить localhost/metadata/DNS-rebind — это намеренно уязвимо
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -34,10 +32,8 @@ func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.Ob
 	}
 	defer resp.Body.Close()
 
-	// читаем первые 512 байт для отладочного сниппета
 	buf := make([]byte, 512)
 	n, _ := io.ReadFull(resp.Body, buf)
-	// io.ReadFull вернёт ошибку если меньше, но мы игнорируем — используем n
 	snippet := buf[:n]
 	b64s := base64.StdEncoding.EncodeToString(snippet)
 
@@ -47,7 +43,6 @@ func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.Ob
 	}
 	at := timePtr(time.Now())
 
-	// обновляем метаданные в базе
 	return s.list.UpdateImageMeta(ctx, listingID, &url, ct, at, &b64s, nil)
 }
 
@@ -60,10 +55,8 @@ func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID
 }
 
 func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.ObjectID, contentType string, data []byte) error {
-	// Кодируем полное изображение в base64
 	fullImageB64 := base64.StdEncoding.EncodeToString(data)
 
-	// Читаем первые 512 байт для отладочного сниппета
 	snippetSize := 512
 	if len(data) < snippetSize {
 		snippetSize = len(data)
@@ -73,9 +66,7 @@ func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.Objec
 
 	ct := &contentType
 	at := timePtr(time.Now())
-	// For file uploads, source_url is nil (not a URL)
 
-	// обновляем метаданные в базе, включая полное изображение
 	return s.list.UpdateImageMeta(ctx, listingID, nil, ct, at, &b64s, &fullImageB64)
 }
 

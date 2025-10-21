@@ -1,4 +1,3 @@
-// internal/logger/logger.go
 package logger
 
 import (
@@ -26,7 +25,6 @@ func InitFromConfig() {
 	})
 }
 
-// Удобные шорткаты
 func Debug(msg string, f ...logrus.Fields) { InitFromConfig(); with(f).Debug(msg) }
 func Info(msg string, f ...logrus.Fields)  { InitFromConfig(); with(f).Info(msg) }
 func Warn(msg string, f ...logrus.Fields)  { InitFromConfig(); with(f).Warn(msg) }

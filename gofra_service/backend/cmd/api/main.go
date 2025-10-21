@@ -23,9 +23,7 @@ func main() {
 
 	cfg := config.Load()
 
-	// run migrations (best-effort)
 	if err := db.Migrate(ctx, cfg); err != nil {
-		// log and continue; migration may already be applied
 		fmt.Fprintf(os.Stderr, "migration failed: %v\n", err)
 	}
 
@@ -36,13 +34,10 @@ func main() {
 	}
 	defer db.Close(client)
 
-	// seed initial data (only runs once)
 	if err := db.SeedInitialData(ctx, database); err != nil {
 		fmt.Fprintf(os.Stderr, "seed failed: %v\n", err)
-		// continue anyway, not critical
 	}
 
-	// create repos
 	usersColl := database.Collection("users")
 	gofersColl := database.Collection("gofers")
 	listingsColl := database.Collection("listings")
@@ -53,20 +48,17 @@ func main() {
 	listingRepo := repo.NewListingRepo(listingsColl)
 	sessionRepo := repo.NewSessionRepo(sessionsColl)
 
-	// services
 	authSvc := service.NewAuthService(userRepo, sessionRepo, "sid")
 	listingSvc := service.NewListingService(userRepo, goferRepo, listingRepo)
 	marketSvc := service.NewMarketService(listingRepo, goferRepo)
 	imageSvc := service.NewImageService(listingRepo)
 
-	// handlers
 	authH := handlers.NewAuthHandler(authSvc, "sid")
 	listingH := handlers.NewListingHandler(listingSvc)
 	marketH := handlers.NewMarketHandler(marketSvc)
 	imageH := handlers.NewImageHandler(imageSvc)
 
 	engine := app.NewServer(cfg)
-	// attach middleware (session-based auth)
 	engine.Use(midleware.Auth(sessionRepo))
 
 	app.RegisterRoutes(engine, app.Handlers{
@@ -76,7 +68,6 @@ func main() {
 		Image:   imageH,
 	})
 
-	// start server with graceful shutdown
 	port := cfg.ServerPort
 	if port == 0 {
 		port = 8080
@@ -90,7 +81,6 @@ func main() {
 		}
 	}()
 
-	// wait for termination signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
