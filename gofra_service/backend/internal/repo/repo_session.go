@@ -3,6 +3,7 @@ package repo
 import (
 	"Gofra_Market/internal/domain"
 	"context"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -49,4 +50,12 @@ func (r *SessionRepo) BySID(ctx context.Context, sid string) (*domain.Session, e
 func (r *SessionRepo) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.c.DeleteOne(ctx, bson.M{"_id": id})
 	return err
+}
+
+// Количество активных сессий на текущий момент
+func (r *SessionRepo) CountActive(ctx context.Context, now time.Time) (int64, error) {
+	filter := bson.M{
+		"expires_at": bson.M{"$gt": now},
+	}
+	return r.c.CountDocuments(ctx, filter)
 }

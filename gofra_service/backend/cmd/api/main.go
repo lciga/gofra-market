@@ -69,12 +69,14 @@ func main() {
 	listingSvc := service.NewListingService(userRepo, goferRepo, listingRepo)
 	marketSvc := service.NewMarketService(listingRepo, goferRepo)
 	imageSvc := service.NewImageService(listingRepo)
+	statsSvc := service.NewStatisticsService(sessionRepo)
 
 	// Инициализация хэндлеров
 	authH := handlers.NewAuthHandler(authSvc, "sid")
 	listingH := handlers.NewListingHandler(listingSvc)
 	marketH := handlers.NewMarketHandler(marketSvc)
 	imageH := handlers.NewImageHandler(imageSvc)
+	statsH := handlers.NewStatisticsHandler(statsSvc)
 
 	engine := app.NewServer(cfg)
 	engine.Use(midleware.Auth(sessionRepo))
@@ -85,6 +87,7 @@ func main() {
 		Market:  marketH,
 		Listing: listingH,
 		Image:   imageH,
+		Stats:   statsH,
 	})
 
 	docs.Register(engine)

@@ -54,4 +54,8 @@ export const listingAPI = {
 	getImageMeta: (id) => api.get(`/listings/${id}/image/meta`),
 }
 
+export const statsAPI = {
+	getActiveUsers: () => api.get('/stats/active-users'),
+}
+
 export default api

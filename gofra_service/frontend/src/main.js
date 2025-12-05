@@ -10,6 +10,33 @@ import App from './App.vue'
 import router from './router'
 import store from './store'
 
+if (typeof window !== 'undefined') {
+    const isInteractiveElement = (target) => {
+        if (!target || !(target instanceof Element)) {
+            return false
+        }
+        return Boolean(target.closest('input, textarea, [contenteditable="true"], .allow-copy'))
+    }
+
+    const blockEvent = (event) => {
+        if (isInteractiveElement(event.target)) {
+            return
+        }
+        event.preventDefault()
+    }
+
+    ['copy', 'cut', 'contextmenu'].forEach((evt) => {
+        document.addEventListener(evt, blockEvent)
+    })
+
+    document.addEventListener('selectstart', (event) => {
+        if (isInteractiveElement(event.target)) {
+            return
+        }
+        event.preventDefault()
+    })
+}
+
 const app = createApp(App)
 
 app.use(Quasar, {

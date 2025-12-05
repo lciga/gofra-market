@@ -9,10 +9,11 @@ import (
 
 // Структура для хранения хэндлеров
 type Handlers struct {
-	Auth    *handlers.AuthHandler    // Хэндлер аутентификации
-	Market  *handlers.MarketHandler  // Хэндлер маркета
-	Listing *handlers.ListingHandler // Хэндлер листинга
-	Image   *handlers.ImageHandler   // Хэндлер для работы с изображениями
+	Auth    *handlers.AuthHandler       // Хэндлер аутентификации
+	Market  *handlers.MarketHandler     // Хэндлер маркета
+	Listing *handlers.ListingHandler    // Хэндлер листинга
+	Image   *handlers.ImageHandler      // Хэндлер для работы с изображениями
+	Stats   *handlers.StatisticsHandler // Хэндлер статистики
 }
 
 // Регистрация роутов
@@ -33,4 +34,5 @@ func RegisterRoutes(e *gin.Engine, h Handlers) {
 	api.POST("/listings/:id/image_from_url", h.Image.FetchFromUrl)
 	api.POST("/listings/:id/image_upload", h.Image.UploadFile)
 	api.GET("/listings/:id/image/meta", h.Image.GetMeta)
+	api.GET("/stats/active-users", h.Stats.ActiveUsers)
 }
