@@ -12,41 +12,47 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Структура маркета
 type MarketGofer struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Rarity int    `json:"rarity"`
+	ID     string `json:"id"`     // Уникальный идентификатор
+	Name   string `json:"name"`   // Имя
+	Rarity int    `json:"rarity"` // Редкость
 }
 
+// Структура изображений
 type MarketImage struct {
-	SourceURL          *string `json:"source_url,omitempty"`
-	ContentType        *string `json:"content_type,omitempty"`
-	FetchedAt          *string `json:"fetched_at,omitempty"`
-	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"`
+	SourceURL          *string `json:"source_url,omitempty"`        // URL источника
+	ContentType        *string `json:"content_type,omitempty"`      // Тип содержимого
+	FetchedAt          *string `json:"fetched_at,omitempty"`        // Время загрузки
+	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"` // Снипет для дебага
 }
 
+// Структура карточки товара
 type Card struct {
-	ID          string      `json:"id"`
-	GoferID     string      `json:"gofer_id"`
-	SellerID    string      `json:"seller_id"`
-	BuyerID     string      `json:"buyer_id,omitempty"`
-	Price       int64       `json:"price"`
-	IsSold      bool        `json:"is_sold"`
-	Description string      `json:"description,omitempty"`
-	CreatedAt   string      `json:"created_at"`
-	Gofer       MarketGofer `json:"gofer"`
-	Image       MarketImage `json:"image"`
+	ID          string      `json:"id"`                    // Уникальный идентификатор
+	GoferID     string      `json:"gofer_id"`              // Идентификатор гофера
+	SellerID    string      `json:"seller_id"`             // Идентификатор продавца
+	BuyerID     string      `json:"buyer_id,omitempty"`    // Идентификатор покупателя
+	Price       int64       `json:"price"`                 // Цена
+	IsSold      bool        `json:"is_sold"`               // Флаг продажи
+	Description string      `json:"description,omitempty"` // Описание
+	CreatedAt   string      `json:"created_at"`            // Время создания
+	Gofer       MarketGofer `json:"gofer"`                 // Гофер
+	Image       MarketImage `json:"image"`                 // Изображение
 }
 
+// Структура сервиса маркета
 type MarketService struct {
 	listing *repo.ListingRepo
 	gofers  *repo.GoferRepo
 }
 
+// Создание нового сервиса маркета
 func NewMarketService(l *repo.ListingRepo, g *repo.GoferRepo) *MarketService {
 	return &MarketService{listing: l, gofers: g}
 }
 
+// Метод для поиска карточек (уязвимо для NoSQL-инъекций)
 func (s *MarketService) SearchRaw(ctx context.Context, filterJSON string, limit, page int, sort string) (cards []Card, total int64, err error) {
 	var raw map[string]any
 	if filterJSON != "" {

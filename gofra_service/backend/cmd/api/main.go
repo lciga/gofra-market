@@ -1,3 +1,4 @@
+// Основной пакет API
 package main
 
 import (
@@ -17,16 +18,20 @@ import (
 	"time"
 )
 
+// Точка входа программы
 func main() {
+	// Контекст для отмены операций по таймауту
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cfg := config.Load()
+	cfg := config.Load() // Загрузка конфига
 
+	// Запуск миграций
 	if err := db.Migrate(ctx, cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "migration failed: %v\n", err)
 	}
 
+	// Подключение к БД
 	client, database, err := db.Connect(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "db connect failed: %v\n", err)
@@ -34,25 +39,30 @@ func main() {
 	}
 	defer db.Close(client)
 
+	// Загрузка начальных данных
 	if err := db.SeedInitialData(ctx, database); err != nil {
 		fmt.Fprintf(os.Stderr, "seed failed: %v\n", err)
 	}
 
-	usersColl := database.Collection("users")
-	gofersColl := database.Collection("gofers")
-	listingsColl := database.Collection("listings")
-	sessionsColl := database.Collection("sessions")
+	// Инициализация коллекций
+	usersColl := database.Collection("users")       // Пользователи
+	gofersColl := database.Collection("gofers")     // Гоферы (лоты)
+	listingsColl := database.Collection("listings") // Листинги
+	sessionsColl := database.Collection("sessions") // Сессии
 
+	// Инициализация репозиториев
 	userRepo := repo.NewUserRepo(usersColl)
 	goferRepo := repo.NewGoferRepo(gofersColl)
 	listingRepo := repo.NewListingRepo(listingsColl)
 	sessionRepo := repo.NewSessionRepo(sessionsColl)
 
+	// Инициализация сервисов
 	authSvc := service.NewAuthService(userRepo, sessionRepo, "sid")
 	listingSvc := service.NewListingService(userRepo, goferRepo, listingRepo)
 	marketSvc := service.NewMarketService(listingRepo, goferRepo)
 	imageSvc := service.NewImageService(listingRepo)
 
+	// Инициализация хэндлеров
 	authH := handlers.NewAuthHandler(authSvc, "sid")
 	listingH := handlers.NewListingHandler(listingSvc)
 	marketH := handlers.NewMarketHandler(marketSvc)
@@ -61,6 +71,7 @@ func main() {
 	engine := app.NewServer(cfg)
 	engine.Use(midleware.Auth(sessionRepo))
 
+	// Регистрация роутов
 	app.RegisterRoutes(engine, app.Handlers{
 		Auth:    authH,
 		Market:  marketH,
@@ -68,6 +79,7 @@ func main() {
 		Image:   imageH,
 	})
 
+	// Запуск сервера
 	port := cfg.ServerPort
 	if port == 0 {
 		port = 8080

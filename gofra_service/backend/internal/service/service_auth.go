@@ -1,3 +1,4 @@
+// Пакет для вспомогательных сервисов
 package service
 
 import (
@@ -15,16 +16,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Структура для сервиса аутентификации
 type AuthService struct {
-	users    *repo.UserRepo
-	sessions *repo.SessionRepo
-	cookie   string
+	users    *repo.UserRepo    // Репозиторий пользователей
+	sessions *repo.SessionRepo // Репозиторий сессий
+	cookie   string            // Куки
 }
 
+// Создание нового сервиса аутентификации
 func NewAuthService(u *repo.UserRepo, s *repo.SessionRepo, c string) *AuthService {
 	return &AuthService{users: u, sessions: s, cookie: c}
 }
 
+// Генерация SID
 func generateSID() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
@@ -33,12 +37,15 @@ func generateSID() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
+// Метод для регистрации
 func (a *AuthService) Register(ctx context.Context, login, pass string) (user *domain.User, sid string, err error) {
+	// Проверка логина и приведение к нижнему регистру
 	login = strings.ToLower(strings.TrimSpace(login))
 	if login == "" || pass == "" {
 		return nil, "", errors.New("empty login or password")
 	}
 
+	// Генерация хэша
 	hash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, "", err
@@ -66,6 +73,7 @@ func (a *AuthService) Register(ctx context.Context, login, pass string) (user *d
 		ExpiredAt: time.Now().Add(30 * 24 * time.Hour),
 	}
 
+	// Создание сессии
 	if err := a.sessions.Create(ctx, sess); err != nil {
 		return nil, "", err
 	}
@@ -73,7 +81,9 @@ func (a *AuthService) Register(ctx context.Context, login, pass string) (user *d
 	return user, sid, nil
 }
 
+// Метод для входа пользователя
 func (a *AuthService) Login(ctx context.Context, login, pass string) (user *domain.User, sid string, err error) {
+	// Приведение логина к нижнему регистру
 	login = strings.ToLower(strings.TrimSpace(login))
 	if login == "" || pass == "" {
 		return nil, "", errors.New("empty login or password")
@@ -84,6 +94,7 @@ func (a *AuthService) Login(ctx context.Context, login, pass string) (user *doma
 		return nil, "", err
 	}
 
+	// Проверка пароля
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(pass)); err != nil {
 		return nil, "", errors.New("invalid credentials")
 	}
@@ -106,6 +117,7 @@ func (a *AuthService) Login(ctx context.Context, login, pass string) (user *doma
 	return user, sid, nil
 }
 
+// Метод для получение текущего пользователя
 func (a *AuthService) Me(ctx context.Context, userID primitive.ObjectID) (*domain.User, error) {
 	return a.users.ByID(ctx, userID)
 }

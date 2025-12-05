@@ -8,12 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type MarketHandler struct{ svc *service.MarketService }
+// Структура хэндлера для маркета
+type MarketHandler struct {
+	svc *service.MarketService // Сервис для работы с маркетом
+}
 
+// Создание нового хэндлера
 func NewMarketHandler(s *service.MarketService) *MarketHandler {
 	return &MarketHandler{svc: s}
 }
 
+// Поиск карточек (уязвим к NoSQL-инъекциям)
 func (h *MarketHandler) Search(c *gin.Context) {
 	raw := c.Query("filter")
 	limitStr := c.DefaultQuery("limit", "20")

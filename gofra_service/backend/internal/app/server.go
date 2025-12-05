@@ -9,18 +9,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Создание нового сервера
 func NewServer(cfg *config.Config) *gin.Engine {
-	mode := cfg.GinMode
-	port := cfg.ServerPort
+	mode := cfg.GinMode    // Режим работы gin
+	port := cfg.ServerPort // Порт
 
 	gin.SetMode(mode)
 	logger.Infof("Gin server start in mode: %d", port)
 
 	eng := gin.New()
 
+	// Конфигурация логгера http запросов
 	eng.Use(gin.Logger())
 	eng.Use(gin.Recovery())
 
+	// Конфигурация CORS
 	corsConfig := cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			if len(cfg.AllowedOrigins) > 0 && cfg.AllowedOrigins[0] == "*" {

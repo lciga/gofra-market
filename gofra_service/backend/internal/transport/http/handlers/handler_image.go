@@ -11,24 +11,29 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Структура для загрузки изображений
 type fetchImageReq struct {
-	URL string `json:"url" binding:"required"`
+	URL string `json:"url" binding:"required"` // URL изображения
 }
 
+// Запрос метаданных изображения
 type imageMetaResp struct {
-	ContentType        *string `json:"content_type"`
-	FetchedAt          *string `json:"fetched_at"`
-	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"`
+	ContentType        *string `json:"content_type"`                // Тип содержимого
+	FetchedAt          *string `json:"fetched_at"`                  // Время загрузки
+	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"` // Сниппет для отладки
 }
 
+// Структура хэндлера для изображений
 type ImageHandler struct {
-	svc *service.ImageService
+	svc *service.ImageService // Сервис для работы с изображениями
 }
 
+// Создание нового хэндлера
 func NewImageHandler(s *service.ImageService) *ImageHandler {
 	return &ImageHandler{svc: s}
 }
 
+// Метод для получения изображения
 func (h *ImageHandler) FetchFromUrl(c *gin.Context) {
 	var req fetchImageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -55,6 +60,7 @@ func (h *ImageHandler) FetchFromUrl(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Метод для получения метаданных
 func (h *ImageHandler) GetMeta(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
@@ -79,6 +85,7 @@ func (h *ImageHandler) GetMeta(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// Метод для получения изображения
 func (h *ImageHandler) GetImage(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
@@ -123,6 +130,7 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 	c.Status(http.StatusNotFound)
 }
 
+// Метод для загрузки файлов
 func (h *ImageHandler) UploadFile(c *gin.Context) {
 	if _, ok := c.Get("userID"); !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})

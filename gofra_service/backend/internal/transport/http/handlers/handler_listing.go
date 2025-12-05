@@ -9,51 +9,59 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Запрос на создание листинга
 type createListingReq struct {
-	GoferName   string `json:"gofer_name" binding:"required"`
-	GoferRarity int    `json:"gofer_rarity" binding:"required"`
-	Price       int64  `json:"price" binding:"required"`
-	Description string `json:"description" binding:"required"`
+	GoferName   string `json:"gofer_name" binding:"required"`   // Имя гофера
+	GoferRarity int    `json:"gofer_rarity" binding:"required"` // Редкость
+	Price       int64  `json:"price" binding:"required"`        // Цена
+	Description string `json:"description" binding:"required"`  // Описание
 }
 
+// Запрос на покупку
 type buyReq struct {
-	ListingID string `json:"listing_id" binding:"required"`
+	ListingID string `json:"listing_id" binding:"required"` // Идентификатор листинга
 }
 
+// Ответ на запрос листинга
 type listingResp struct {
-	ID          string           `json:"id"`
-	GoferID     string           `json:"gofer_id"`
-	SellerID    string           `json:"seller_id"`
-	Price       int64            `json:"price"`
-	IsSold      bool             `json:"is_sold"`
-	BuyerID     string           `json:"buyer_id,omitempty"`
-	Description string           `json:"description,omitempty"`
-	Image       listingImageResp `json:"image"`
-	CreatedAt   string           `json:"created_at"`
-	Gofer       listingGoferResp `json:"gofer"`
+	ID          string           `json:"id"`                    // Идентификатор листинга
+	GoferID     string           `json:"gofer_id"`              // Идентификатор гофера
+	SellerID    string           `json:"seller_id"`             // Идентификатор продавца
+	Price       int64            `json:"price"`                 // Цена
+	IsSold      bool             `json:"is_sold"`               // Флаг продажи
+	BuyerID     string           `json:"buyer_id,omitempty"`    // Идентификатор покупателя
+	Description string           `json:"description,omitempty"` // Описание
+	Image       listingImageResp `json:"image"`                 // Изображение
+	CreatedAt   string           `json:"created_at"`            // Время создания
+	Gofer       listingGoferResp `json:"gofer"`                 // Гофер
 }
 
+// Ответ на запрос изображения листинга
 type listingImageResp struct {
-	SourceURL          *string `json:"source_url,omitempty"`
-	ContentType        *string `json:"content_type,omitempty"`
-	FetchedAt          *string `json:"fetched_at,omitempty"`
-	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"`
+	SourceURL          *string `json:"source_url,omitempty"`        // URL источника
+	ContentType        *string `json:"content_type,omitempty"`      // Тип содержимого
+	FetchedAt          *string `json:"fetched_at,omitempty"`        // Время загрузки
+	DebugBase64Snippet *string `json:"debug_snippet_b64,omitempty"` // Сниппет для отладки
 }
 
+// Запрос гофреа
 type listingGoferResp struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Rarity int    `json:"rarity"`
+	ID     string `json:"id"`     // Идентификатор
+	Name   string `json:"name"`   // Имя
+	Rarity int    `json:"rarity"` // Редкость
 }
 
+// Структура хэндлера листинга
 type ListingHandler struct {
-	svc *service.ListingService
+	svc *service.ListingService // Сервис для работы с листингом
 }
 
+// Создание нового хэндлера
 func NewListingHandler(s *service.ListingService) *ListingHandler {
 	return &ListingHandler{svc: s}
 }
 
+// Метод для создания листинга
 func (h *ListingHandler) Create(c *gin.Context) {
 	var req createListingReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -80,6 +88,7 @@ func (h *ListingHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": id.Hex()})
 }
 
+// Метод получения листинга
 func (h *ListingHandler) Get(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
@@ -135,6 +144,7 @@ func (h *ListingHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// Метод для покупки
 func (h *ListingHandler) Buy(c *gin.Context) {
 	var req buyReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -165,6 +175,7 @@ func (h *ListingHandler) Buy(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Метод для изменения баланса (уязвим к uint underflow)
 func (h *ListingHandler) Bump(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {
@@ -191,6 +202,7 @@ func (h *ListingHandler) Bump(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Метод для получения листингов текущего пользователя
 func (h *ListingHandler) GetMyListings(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {
@@ -256,6 +268,7 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"listings": result})
 }
 
+// Метод для получения гоферов для текущего пользователя
 func (h *ListingHandler) GetMyGofers(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {

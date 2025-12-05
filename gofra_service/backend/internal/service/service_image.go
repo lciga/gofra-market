@@ -11,27 +11,33 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Структура сервиса для работы с изображениями
 type ImageService struct {
-	list *repo.ListingRepo
-	http *http.Client
+	list *repo.ListingRepo // Репозиторий листинга
+	http *http.Client      // HTTP-клиент
 }
 
+// Создание нового сервиса для работы с изображениями
 func NewImageService(l *repo.ListingRepo) *ImageService {
 	return &ImageService{list: l, http: http.DefaultClient}
 }
 
+// Метод для сохранения и загрузки изображения (уязвима для SSRF)
 func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.ObjectID, url string) error {
+	// Создание запроса с контекстом
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
 
+	// Выполнение запроса
 	resp, err := s.http.Do(req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() // Отложенное закрытие тела запроса
 
+	// Чтение полученного изображения
 	buf := make([]byte, 512)
 	n, _ := io.ReadFull(resp.Body, buf)
 	snippet := buf[:n]
@@ -46,6 +52,7 @@ func (s *ImageService) FetchAndStore(ctx context.Context, listingID primitive.Ob
 	return s.list.UpdateImageMeta(ctx, listingID, &url, ct, at, &b64s, nil)
 }
 
+// Метод для получения метаданных
 func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID) (ct *string, b64 *string, at *time.Time, err error) {
 	l, err := s.list.ByID(ctx, listingID)
 	if err != nil {
@@ -54,6 +61,7 @@ func (s *ImageService) GetMeta(ctx context.Context, listingID primitive.ObjectID
 	return l.Image.ContentType, l.Image.DebugSnippet, l.Image.FetchedAt, nil
 }
 
+// Метод для загрузки файла
 func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.ObjectID, contentType string, data []byte) error {
 	fullImageB64 := base64.StdEncoding.EncodeToString(data)
 
@@ -72,6 +80,7 @@ func (s *ImageService) UploadFile(ctx context.Context, listingID primitive.Objec
 
 func timePtr(t time.Time) *time.Time { return &t }
 
+// Метод для получения URL
 func (s *ImageService) GetImageSourceURL(ctx context.Context, listingID primitive.ObjectID) (*string, error) {
 	listing, err := s.list.ByID(ctx, listingID)
 	if err != nil {
@@ -80,6 +89,7 @@ func (s *ImageService) GetImageSourceURL(ctx context.Context, listingID primitiv
 	return listing.Image.SourceURL, nil
 }
 
+// Метод для получения изображения листинга
 func (s *ImageService) GetImage(ctx context.Context, listingID primitive.ObjectID) (imageData *string, contentType *string, sourceURL *string, err error) {
 	listing, err := s.list.ByID(ctx, listingID)
 	if err != nil {

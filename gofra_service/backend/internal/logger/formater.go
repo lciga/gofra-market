@@ -1,3 +1,4 @@
+// Пакет для работы с логами
 package logger
 
 import (
@@ -10,8 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Структура форматтера
 type ginLikeFormatter struct{}
 
+// Метод для форматирования логов
 func (f *ginLikeFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	var b bytes.Buffer
 	ts := e.Time.Format("2006/01/02 - 15:04:05")
@@ -45,6 +48,7 @@ func (f *ginLikeFormatter) Format(e *logrus.Entry) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
+// Перевод в строку
 func toString(v any) string {
 	if t, ok := v.(time.Time); ok {
 		return t.Format(time.RFC3339)

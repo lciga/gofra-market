@@ -1,3 +1,4 @@
+// Пакет для работы с данными в БД
 package repo
 
 import (
@@ -9,12 +10,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type GoferRepo struct{ c *mongo.Collection }
+// Структура для репозитория гоферов
+type GoferRepo struct {
+	c *mongo.Collection // Коллекция
+}
 
+// Создание нового репозитория гофера
 func NewGoferRepo(c *mongo.Collection) *GoferRepo {
 	return &GoferRepo{c: c}
 }
 
+// Метод для создания нового гофера
 func (r *GoferRepo) Create(ctx context.Context, g *domain.Gofer) error {
 	if g.ID.IsZero() {
 		g.ID = primitive.NewObjectID()
@@ -23,6 +29,7 @@ func (r *GoferRepo) Create(ctx context.Context, g *domain.Gofer) error {
 	return err
 }
 
+// Метод для поиска гофера по идентификатору
 func (r *GoferRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Gofer, error) {
 	var g domain.Gofer
 	err := r.c.FindOne(ctx, bson.M{"_id": id}).Decode(&g)
@@ -32,11 +39,13 @@ func (r *GoferRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Go
 	return &g, nil
 }
 
+// Метод изменения владельца гофера
 func (r *GoferRepo) TransferOwner(ctx context.Context, goferID, newOwnerID primitive.ObjectID) error {
 	_, err := r.c.UpdateOne(ctx, bson.M{"_id": goferID}, bson.M{"$set": bson.M{"owner_id": newOwnerID}})
 	return err
 }
 
+// Поиск гоферов по владельцу
 func (r *GoferRepo) ByOwner(ctx context.Context, ownerID primitive.ObjectID) ([]*domain.Gofer, error) {
 	cur, err := r.c.Find(ctx, bson.M{"owner_id": ownerID})
 	if err != nil {

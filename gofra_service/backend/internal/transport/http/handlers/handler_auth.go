@@ -1,3 +1,4 @@
+// Пакет для работы с хэндлерами
 package handlers
 
 import (
@@ -8,31 +9,37 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Структура запроса на регистрацию
 type registerReq struct {
 	Login    string `json:"login" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
+// Структура запроса на вход
 type loginReq struct {
 	Login    string `json:"login" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
+// Структура ответа на запрос текущего пользователя
 type meResp struct {
 	UserID  string `json:"user_id"`
 	Login   string `json:"login"`
 	Balance int64  `json:"balance"`
 }
 
+// Структура хэндлера аутентификации
 type AuthHandler struct {
-	svc    *service.AuthService
-	cookie string
+	svc    *service.AuthService // Сервис аутентификации
+	cookie string               // Куки
 }
 
+// Создание нового хэндлера
 func NewAuthHandler(s *service.AuthService, c string) *AuthHandler {
 	return &AuthHandler{svc: s, cookie: c}
 }
 
+// Метод для регистрации
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -50,6 +57,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, meResp{UserID: user.ID.Hex(), Login: user.Login, Balance: user.Balance})
 }
 
+// Метод для входа
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -67,6 +75,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, meResp{UserID: user.ID.Hex(), Login: user.Login, Balance: user.Balance})
 }
 
+// Метод получения текущего пользователя
 func (h *AuthHandler) Me(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {

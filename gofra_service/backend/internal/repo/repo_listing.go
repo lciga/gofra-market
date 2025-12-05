@@ -11,12 +11,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type ListingRepo struct{ c *mongo.Collection }
+// Структура репозиторяи листинга
+type ListingRepo struct {
+	c *mongo.Collection // Коллекция
+}
 
+// Создание нового репозитория
 func NewListingRepo(c *mongo.Collection) *ListingRepo {
 	return &ListingRepo{c: c}
 }
 
+// Метод для создания листинга
 func (r *ListingRepo) Create(ctx context.Context, l *domain.Listing) error {
 	if l.ID.IsZero() {
 		l.ID = primitive.NewObjectID()
@@ -25,6 +30,7 @@ func (r *ListingRepo) Create(ctx context.Context, l *domain.Listing) error {
 	return err
 }
 
+// Метод получение листинга по идентификатору
 func (r *ListingRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Listing, error) {
 	var l domain.Listing
 	err := r.c.FindOne(ctx, bson.M{"_id": id}).Decode(&l)
@@ -34,12 +40,14 @@ func (r *ListingRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.
 	return &l, nil
 }
 
+// Метод для смены флага is_sold
 func (r *ListingRepo) SetSold(ctx context.Context, id, buyer primitive.ObjectID) error {
 	update := bson.M{"$set": bson.M{"buyer_id": buyer, "is_sold": true}}
 	_, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, update)
 	return err
 }
 
+// Метод обновления метаданных изображения
 func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID, url *string, ct *string, at *time.Time, b64 *string, imageData *string) error {
 	set := bson.M{}
 	if url != nil {
@@ -62,6 +70,7 @@ func (r *ListingRepo) UpdateImageMeta(ctx context.Context, id primitive.ObjectID
 	return err
 }
 
+// Метод поиска листингов (уязвим для NoSQL-инъекций)
 func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, skip int64, sort bson.D) (cur *mongo.Cursor, total int64, err error) {
 	pipeline := mongo.Pipeline{}
 
@@ -98,7 +107,7 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 	countPipeline := mongo.Pipeline{}
 
 	if len(raw) > 0 {
-		countPipeline = append(countPipeline, bson.D{{Key: "$match", Value: raw}})
+		countPipeline = append(countPipeline, bson.D{{Key: "$match", Value: raw}}) // Уязвимо, поскольку не санитизируется запрос
 	}
 
 	countPipeline = append(countPipeline, bson.D{{Key: "$lookup", Value: bson.D{
@@ -115,7 +124,7 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 
 	countCur, err := r.c.Aggregate(ctx, countPipeline)
 	if err != nil {
-		return cur, 0, nil 
+		return cur, 0, nil
 	}
 	defer countCur.Close(ctx)
 
@@ -129,6 +138,7 @@ func (r *ListingRepo) FindCards(ctx context.Context, raw map[string]any, limit, 
 	return cur, total, nil
 }
 
+// Метод поиска листингов по пользователю
 func (r *ListingRepo) ByUser(ctx context.Context, userID primitive.ObjectID) ([]*domain.Listing, error) {
 	filter := bson.M{
 		"$or": []bson.M{

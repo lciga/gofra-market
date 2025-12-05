@@ -1,3 +1,4 @@
+// Пакет инициализации конфига
 package config
 
 import (
@@ -8,17 +9,19 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Структура для хранения конфига
 type Config struct {
-	MongoURI       string
-	DBName         string
-	MongoUser      string
-	MongoPassword  string
-	LogLevel       string
-	ServerPort     int
-	GinMode        string
-	AllowedOrigins []string
+	MongoURI       string   // URI MongoDB
+	DBName         string   // Имя БД
+	MongoUser      string   // Пользователь
+	MongoPassword  string   // Пароль
+	LogLevel       string   // Уровень логироания
+	ServerPort     int      // Порт сервера
+	GinMode        string   // Режим работы gin
+	AllowedOrigins []string // Разрешённые источники для CORS
 }
 
+// Загрузка конфига
 func Load() *Config {
 	_ = godotenv.Load()
 	cfg := &Config{}

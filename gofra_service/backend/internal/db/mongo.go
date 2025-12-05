@@ -1,3 +1,4 @@
+// Пакет для работы БД
 package db
 
 import (
@@ -21,6 +22,7 @@ import (
 //go:embed migration/*
 var migrationsFS embed.FS
 
+// Подключение к БД
 func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 	if cfg.MongoURI == "" {
 		return nil, nil, errors.New("Connect: empty MongoDB URI")
@@ -29,6 +31,7 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 		return nil, nil, errors.New("Connect: empty database name")
 	}
 
+	// Конфигурация клиента
 	clientOptions := options.Client().
 		ApplyURI(cfg.MongoURI).
 		SetRetryReads(true).
@@ -43,14 +46,17 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 		})
 	}
 
+	// Контекст для отмены операции при таймауте
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Подключение к БД с контекстом
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Connect: mongo.Connect: %w", err)
 	}
 
+	// Проверка подключения
 	if err := client.Ping(ctx, readpref.Primary()); err != nil {
 		client.Disconnect(context.Background())
 		return nil, nil, fmt.Errorf("Connect: ping primary failed: %w", err)
@@ -59,11 +65,13 @@ func Connect(cfg *config.Config) (*mongo.Client, *mongo.Database, error) {
 	return client, db, nil
 }
 
+// Выполнение миграции
 func Migrate(ctx context.Context, cfg *config.Config) error {
 	logger.Info("Starting MongoDB migration", logrus.Fields{
 		"db": cfg.DBName,
 	})
 
+	// Инициализация источника из embed
 	src, err := iofs.New(migrationsFS, "migration")
 	if err != nil {
 		logger.Error(fmt.Errorf("iofs.New failed: %w", err), logrus.Fields{
@@ -72,6 +80,7 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("iofs.New: %w", err)
 	}
 
+	// Чтение директории с миграциями
 	if entries, err := migrationsFS.ReadDir("migration"); err != nil {
 		logger.Warnf("failed to read embedded migrations dir: %v", err)
 	} else {
@@ -82,9 +91,11 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		logger.Info("embedded migrations files", logrus.Fields{"files": names})
 	}
 
+	// Контекст для подключения с таймаутом
 	connCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	// Конфигурация клиента
 	clientOpts := options.Client().ApplyURI(cfg.MongoURI)
 	if cfg.MongoUser != "" {
 		clientOpts.SetAuth(options.Credential{
@@ -93,6 +104,7 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 			AuthSource: "admin",
 		})
 	}
+	// Подключение к БД
 	client, err := mongo.Connect(connCtx, clientOpts)
 	if err != nil {
 		logger.Error(fmt.Errorf("mongo.Connect failed: %w", err), logrus.Fields{
@@ -102,6 +114,7 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("mongo.Connect: %w", err)
 	}
 
+	// Отложенная функция отключения
 	defer func() {
 		if err := client.Disconnect(context.Background()); err != nil {
 			logger.Error(fmt.Errorf("client.Disconnect failed: %w", err), logrus.Fields{"step": "client.Disconnect"})
@@ -110,11 +123,13 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		}
 	}()
 
+	// Проверка подключения
 	if err := client.Ping(connCtx, readpref.Primary()); err != nil {
 		logger.Error(fmt.Errorf("ping primary failed: %w", err), logrus.Fields{"step": "ping"})
 		return fmt.Errorf("ping primary: %w", err)
 	}
 
+	// Инициализация драйвера
 	driver, err := mgm.WithInstance(client, &mgm.Config{
 		DatabaseName:         cfg.DBName,
 		MigrationsCollection: "gofra",
@@ -125,18 +140,21 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("mgm.WithInstance: %w", err)
 	}
 
+	// Инициализация миграции
 	m, err := migrate.NewWithInstance("iofs", src, "mongodb", driver)
 	if err != nil {
 		logger.Error(fmt.Errorf("migrate.NewWithInstance failed: %w", err), logrus.Fields{"step": "NewWithInstance"})
 		return fmt.Errorf("migrate.NewWithInstance: %w", err)
 	}
 
+	// Отложенная функция закрытия миграции
 	defer func() {
 		if _, cerr := m.Close(); cerr != nil {
 			logger.Warnf("m.Close() error: %v", cerr)
 		}
 	}()
 
+	// Запуск миграции
 	if err := m.Up(); err != nil {
 		if err == migrate.ErrNoChange {
 			logger.Info("Mongo migration: up to date")
@@ -150,6 +168,7 @@ func Migrate(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
+// Закрытие соединения
 func Close(client *mongo.Client) error {
 	if client == nil {
 		return nil

@@ -1,3 +1,4 @@
+// Пакет для работы с middleware
 package midleware
 
 import (
@@ -11,13 +12,15 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type ctxKey string 
+type ctxKey string // Строка контекста
 
+// Интерфейс хранилища сессий
 type SessionStore interface {
 	BySID(ctx context.Context, sid string) (*domain.Session, error)
 	Delete(ctx context.Context, id primitive.ObjectID) error
 }
 
+// Авторизация пользователя
 func Auth(sess SessionStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Cookie("sid")

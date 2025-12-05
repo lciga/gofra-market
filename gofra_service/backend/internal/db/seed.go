@@ -14,6 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Создание данных при инициализации
 func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 	logger.Info("Checking if initial seed is needed", logrus.Fields{})
 

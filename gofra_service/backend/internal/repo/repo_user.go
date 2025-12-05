@@ -10,17 +10,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// Переменные для ошибок
 var (
 	ErrUserNotFound = errors.New("user not found")
 	ErrLoginTaken   = errors.New("login already taken")
 )
 
-type UserRepo struct{ c *mongo.Collection }
+// Структура для репозитория пользователей
+type UserRepo struct {
+	c *mongo.Collection // Коллекция
+}
 
+// Создания нового репозитория пользователей
 func NewUserRepo(c *mongo.Collection) *UserRepo {
 	return &UserRepo{c: c}
 }
 
+// Метод для создания пользователя
 func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 	res, err := r.c.InsertOne(ctx, user)
 	if mongo.IsDuplicateKeyError(err) {
@@ -35,6 +41,7 @@ func (r *UserRepo) Create(ctx context.Context, user *domain.User) error {
 	return nil
 }
 
+// Метод для поиска пользователя по логину
 func (r *UserRepo) ByLogin(ctx context.Context, login string) (*domain.User, error) {
 	var user domain.User
 	err := r.c.FindOne(ctx, bson.M{"login": login}).Decode(&user)
@@ -44,6 +51,7 @@ func (r *UserRepo) ByLogin(ctx context.Context, login string) (*domain.User, err
 	return &user, err
 }
 
+// Метод для поиска пользователя по идентификатору
 func (r *UserRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.User, error) {
 	var user domain.User
 	err := r.c.FindOne(ctx, bson.M{"_id": id}).Decode(&user)
@@ -53,6 +61,7 @@ func (r *UserRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Use
 	return &user, err
 }
 
+// Метод для обновления баланса
 func (r *UserRepo) UpdateBalance(ctx context.Context, id primitive.ObjectID, newBalance int64) error {
 	res, err := r.c.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"balance": newBalance}})
 	if err != nil {
