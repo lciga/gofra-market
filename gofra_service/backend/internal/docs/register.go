@@ -1,11 +1,6 @@
 package docs
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"runtime"
-
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -20,20 +15,4 @@ func Register(engine *gin.Engine) {
 	}
 
 	engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	root := projectRoot()
-	handler, err := NewPackageDocsHandler(root)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "package docs disabled: %v\n", err)
-		return
-	}
-
-	engine.GET("/debug/pkgdocs", handler)
-}
-
-func projectRoot() string {
-	if _, file, _, ok := runtime.Caller(0); ok {
-		return filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
-	}
-	return "."
 }
