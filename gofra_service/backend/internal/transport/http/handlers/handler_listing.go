@@ -17,6 +17,11 @@ type createListingReq struct {
 	Description string `json:"description" binding:"required"`  // Описание
 }
 
+// Ответ на создание листинга
+type createListingResp struct {
+	ID string `json:"id"`
+}
+
 // Запрос на покупку
 type buyReq struct {
 	ListingID string `json:"listing_id" binding:"required"` // Идентификатор листинга
@@ -61,39 +66,59 @@ func NewListingHandler(s *service.ListingService) *ListingHandler {
 	return &ListingHandler{svc: s}
 }
 
-// Метод для создания листинга
+// Create godoc
+// @Summary Создание листинга с гофером
+// @Description Создаёт листинг и нового гофера, привязанного к продавцу.
+// @Tags listings
+// @Accept json
+// @Produce json
+// @Param payload body createListingReq true "Описание листинга"
+// @Success 201 {object} createListingResp
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/listings [post]
 func (h *ListingHandler) Create(c *gin.Context) {
 	var req createListingReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: err.Error()})
 		return
 	}
 
 	v, ok := c.Get("userID")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 	sellerID, ok := v.(primitive.ObjectID)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "invalid user id"})
 		return
 	}
 
 	id, err := h.svc.CreateWithGofer(c.Request.Context(), sellerID, req.GoferName, req.GoferRarity, req.Price, req.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"id": id.Hex()})
+	c.JSON(http.StatusCreated, createListingResp{ID: id.Hex()})
 }
 
-// Метод получения листинга
+// Get godoc
+// @Summary Получение листинга
+// @Description Возвращает листинг с данными гофера. Скрывает описание для посторонних пользователей.
+// @Tags listings
+// @Produce json
+// @Param id path string true "ID листинга"
+// @Success 200 {object} listingResp
+// @Failure 400 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Router /api/listings/{id} [get]
 func (h *ListingHandler) Get(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid id"})
 		return
 	}
 
@@ -106,7 +131,7 @@ func (h *ListingHandler) Get(c *gin.Context) {
 
 	l, g, err := h.svc.GetWithGofer(c.Request.Context(), id, requester)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, errorResponse{Error: err.Error()})
 		return
 	}
 
@@ -144,84 +169,111 @@ func (h *ListingHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Метод для покупки
+// Buy godoc
+// @Summary Покупка листинга
+// @Description Переводит гофера покупателю и списывает средства.
+// @Tags listings
+// @Accept json
+// @Param payload body buyReq true "Листинг для покупки"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/buy [post]
 func (h *ListingHandler) Buy(c *gin.Context) {
 	var req buyReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: err.Error()})
 		return
 	}
 	v, ok := c.Get("userID")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 	buyerID, ok := v.(primitive.ObjectID)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "invalid user id"})
 		return
 	}
 
 	listingID, err := primitive.ObjectIDFromHex(req.ListingID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid listing id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid listing id"})
 		return
 	}
 
 	if err := h.svc.Buy(c.Request.Context(), buyerID, listingID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-// Метод для изменения баланса (уязвим к uint underflow)
+// Bump godoc
+// @Summary Поднять листинг
+// @Description Списывает стоимость поднятия с баланса продавца (уязвим к uint underflow).
+// @Tags listings
+// @Param id path string true "ID листинга"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/listings/{id}/bump [post]
 func (h *ListingHandler) Bump(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 	userID, ok := v.(primitive.ObjectID)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "invalid user id"})
 		return
 	}
 
 	idStr := c.Param("id")
 	listingID, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid id"})
 		return
 	}
 
 	if err := h.svc.Bump(c.Request.Context(), userID, listingID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-// Метод для получения листингов текущего пользователя
+// GetMyListings godoc
+// @Summary Мои листинги
+// @Description Возвращает листинги текущего пользователя вместе с гоферами.
+// @Tags listings
+// @Produce json
+// @Success 200 {object} listingListResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/my-listings [get]
 func (h *ListingHandler) GetMyListings(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 	userID, ok := v.(primitive.ObjectID)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "invalid user id"})
 		return
 	}
 
 	listings, gofers, err := h.svc.GetUserListingsWithGofers(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
 
-	var result []map[string]interface{}
+	result := make([]listingResp, 0, len(listings))
 	for i, listing := range listings {
 		var buyerID string
 		if listing.BuyerID != primitive.NilObjectID {
@@ -241,61 +293,68 @@ func (h *ListingHandler) GetMyListings(c *gin.Context) {
 			description = ""
 		}
 
-		item := map[string]interface{}{
-			"id":          listing.ID.Hex(),
-			"gofer_id":    listing.GoferID.Hex(),
-			"seller_id":   listing.SellerID.Hex(),
-			"buyer_id":    buyerID,
-			"price":       listing.Price,
-			"is_sold":     listing.IsSold,
-			"description": description,
-			"created_at":  listing.CreatedAt.Format(time.RFC3339),
-			"gofer": map[string]interface{}{
-				"id":     gofers[i].ID.Hex(),
-				"name":   gofers[i].Name,
-				"rarity": gofers[i].Rarity,
-			},
-			"image": map[string]interface{}{
-				"source_url":        listing.Image.SourceURL,
-				"content_type":      listing.Image.ContentType,
-				"fetched_at":        fetchedAt,
-				"debug_snippet_b64": listing.Image.DebugSnippet,
+		item := listingResp{
+			ID:          listing.ID.Hex(),
+			GoferID:     listing.GoferID.Hex(),
+			SellerID:    listing.SellerID.Hex(),
+			Price:       listing.Price,
+			IsSold:      listing.IsSold,
+			BuyerID:     buyerID,
+			Description: description,
+			CreatedAt:   listing.CreatedAt.Format(time.RFC3339),
+			Gofer: listingGoferResp{
+				ID:     gofers[i].ID.Hex(),
+				Name:   gofers[i].Name,
+				Rarity: gofers[i].Rarity,
 			},
 		}
+		item.Image.SourceURL = listing.Image.SourceURL
+		item.Image.ContentType = listing.Image.ContentType
+		item.Image.FetchedAt = fetchedAt
+		item.Image.DebugBase64Snippet = listing.Image.DebugSnippet
+
 		result = append(result, item)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"listings": result})
+	c.JSON(http.StatusOK, listingListResponse{Listings: result})
 }
 
-// Метод для получения гоферов для текущего пользователя
+// GetMyGofers godoc
+// @Summary Мои гоферы
+// @Description Возвращает гоферов, которыми владеет текущий пользователь.
+// @Tags listings
+// @Produce json
+// @Success 200 {object} goferListResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/my-gofers [get]
 func (h *ListingHandler) GetMyGofers(c *gin.Context) {
 	v, ok := c.Get("userID")
 	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 	userID, ok := v.(primitive.ObjectID)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid user id"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "invalid user id"})
 		return
 	}
 
 	gofers, err := h.svc.GetUserGofers(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
 
-	result := make([]map[string]interface{}, 0, len(gofers))
+	result := make([]goferItem, 0, len(gofers))
 	for _, gofer := range gofers {
-		result = append(result, map[string]interface{}{
-			"id":         gofer.ID.Hex(),
-			"name":       gofer.Name,
-			"rarity":     gofer.Rarity,
-			"created_at": gofer.CreatedAt.Format(time.RFC3339),
+		result = append(result, goferItem{
+			ID:        gofer.ID.Hex(),
+			Name:      gofer.Name,
+			Rarity:    gofer.Rarity,
+			CreatedAt: gofer.CreatedAt.Format(time.RFC3339),
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"gofers": result})
+	c.JSON(http.StatusOK, goferListResponse{Gofers: result})
 }

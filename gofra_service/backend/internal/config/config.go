@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 )
 
@@ -33,6 +34,9 @@ func Load() *Config {
 	cfg.LogLevel = os.Getenv("LOG_LEVEL")
 	cfg.ServerPort, _ = strconv.Atoi(os.Getenv("SERVER_PORT"))
 	cfg.GinMode = os.Getenv("GIN_MODE")
+	if cfg.GinMode == "" {
+		cfg.GinMode = gin.DebugMode
+	}
 
 	if corsEnv := os.Getenv("CORS_ALLOWED_ORIGINS"); corsEnv != "" {
 		parts := strings.Split(corsEnv, ",")

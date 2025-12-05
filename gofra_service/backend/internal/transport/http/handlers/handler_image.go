@@ -33,45 +33,65 @@ func NewImageHandler(s *service.ImageService) *ImageHandler {
 	return &ImageHandler{svc: s}
 }
 
-// Метод для получения изображения
+// FetchFromUrl godoc
+// @Summary Загрузка изображения по URL
+// @Description Загружает изображение для листинга по произвольному URL (уязвимо для SSRF).
+// @Tags images
+// @Accept json
+// @Param id path string true "ID листинга"
+// @Param payload body fetchImageReq true "URL источника"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/listings/{id}/image_from_url [post]
 func (h *ImageHandler) FetchFromUrl(c *gin.Context) {
 	var req fetchImageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: err.Error()})
 		return
 	}
 
 	if _, ok := c.Get("userID"); !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid id"})
 		return
 	}
 
 	if err := h.svc.FetchAndStore(c.Request.Context(), id, req.URL); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
 	c.Status(http.StatusNoContent)
 }
 
-// Метод для получения метаданных
+// GetMeta godoc
+// @Summary Метаданные изображения
+// @Description Возвращает сохранённые метаданные изображения листинга.
+// @Tags images
+// @Produce json
+// @Param id path string true "ID листинга"
+// @Success 200 {object} imageMetaResp
+// @Failure 400 {object} errorResponse
+// @Failure 404 {object} errorResponse
+// @Router /api/listings/{id}/image/meta [get]
 func (h *ImageHandler) GetMeta(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid id"})
 		return
 	}
 
 	ct, b64, at, err := h.svc.GetMeta(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, errorResponse{Error: err.Error()})
 		return
 	}
 
@@ -85,12 +105,22 @@ func (h *ImageHandler) GetMeta(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// Метод для получения изображения
+// GetImage godoc
+// @Summary Получение изображения
+// @Description Возвращает изображение листинга или редиректит на исходный URL.
+// @Tags images
+// @Produce application/octet-stream
+// @Param id path string true "ID листинга"
+// @Success 200 {file} file "Изображение"
+// @Success 302 {string} string "Redirect"
+// @Failure 400 {object} errorResponse
+// @Failure 404 {string} string "Not Found"
+// @Router /api/listings/{id}/image [get]
 func (h *ImageHandler) GetImage(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid id"})
 		return
 	}
 
@@ -130,42 +160,53 @@ func (h *ImageHandler) GetImage(c *gin.Context) {
 	c.Status(http.StatusNotFound)
 }
 
-// Метод для загрузки файлов
+// UploadFile godoc
+// @Summary Загрузка файла изображения
+// @Description Принимает multipart-файл и сохраняет Base64 представление.
+// @Tags images
+// @Accept multipart/form-data
+// @Param id path string true "ID листинга"
+// @Param image formData file true "Файл изображения"
+// @Success 204 {string} string "No Content"
+// @Failure 400 {object} errorResponse
+// @Failure 401 {object} errorResponse
+// @Failure 500 {object} errorResponse
+// @Router /api/listings/{id}/image_upload [post]
 func (h *ImageHandler) UploadFile(c *gin.Context) {
 	if _, ok := c.Get("userID"); !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
 		return
 	}
 
 	idStr := c.Param("id")
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "invalid id"})
 		return
 	}
 
 	file, err := c.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no file uploaded"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "no file uploaded"})
 		return
 	}
 
 	const maxSize = 5 * 1024 * 1024
 	if file.Size > maxSize {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file too large (max 5MB)"})
+		c.JSON(http.StatusBadRequest, errorResponse{Error: "file too large (max 5MB)"})
 		return
 	}
 
 	f, err := file.Open()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "failed to read file"})
 		return
 	}
 	defer f.Close()
 
 	data := make([]byte, file.Size)
 	if _, err := f.Read(data); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to read file content"})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: "failed to read file content"})
 		return
 	}
 
@@ -176,7 +217,7 @@ func (h *ImageHandler) UploadFile(c *gin.Context) {
 
 	if err := h.svc.UploadFile(c.Request.Context(), id, contentType, data); err != nil {
 		logger.Errorf("UploadFile: failed to upload image for listing %s: %v", id.Hex(), err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, errorResponse{Error: err.Error()})
 		return
 	}
 

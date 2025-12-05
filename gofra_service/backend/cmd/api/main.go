@@ -1,10 +1,18 @@
-// Основной пакет API
+// @title Gofra Market API
+// @version 1.0
+// @description Attack-Defense CTF сервис магазина гоферов с преднамеренными уязвимостями (NoSQL injection, SSRF, uint underflow).
+// @BasePath /
+// @schemes http
+// @securityDefinitions.apiKey CookieAuth
+// @in cookie
+// @name sid
 package main
 
 import (
 	"Gofra_Market/internal/app"
 	"Gofra_Market/internal/config"
 	"Gofra_Market/internal/db"
+	"Gofra_Market/internal/docs"
 	"Gofra_Market/internal/repo"
 	"Gofra_Market/internal/service"
 	"Gofra_Market/internal/transport/http/handlers"
@@ -78,6 +86,8 @@ func main() {
 		Listing: listingH,
 		Image:   imageH,
 	})
+
+	docs.Register(engine)
 
 	// Запуск сервера
 	port := cfg.ServerPort
