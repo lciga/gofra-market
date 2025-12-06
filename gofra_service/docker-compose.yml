@@ -39,7 +39,11 @@ services:
     environment:
       - VIRTUAL_HOST=localhost
     ports:
-      - "8081:80"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/certs/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
+      - ./frontend/certs/privkey.pem:/etc/nginx/certs/privkey.pem:ro
     restart: unless-stopped
 
 volumes:

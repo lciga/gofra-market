@@ -92,3 +92,4 @@ ui/.vscode/
 node_modules/
 yarn.lock
 .eslintcache
+frontend/certs/
