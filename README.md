@@ -97,7 +97,6 @@ npm run dev
 ## Документация и отладка
 - Swagger UI (доступно при `GIN_MODE=debug`): `http://localhost:8080/swagger/index.html`
 - Swagger артефакты: `backend/internal/docs/swagger/swagger.{json,yaml}`
-- JSON-обзор Go-пакетов: `http://localhost:8080/debug/pkgdocs`
 - Перегенерация Swagger после правок API:
   ```bash
   cd gofra_service/backend
