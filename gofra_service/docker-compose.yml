@@ -42,8 +42,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./frontend/certs/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
-      - ./frontend/certs/privkey.pem:/etc/nginx/certs/privkey.pem:ro
+      - /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN:-gofra.lciga.ru}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
+      - /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN:-gofra.lciga.ru}/privkey.pem:/etc/nginx/certs/privkey.pem:ro
     restart: unless-stopped
 
 volumes:
