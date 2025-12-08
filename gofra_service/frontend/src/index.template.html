@@ -6,6 +6,36 @@
     <meta name="description" content="Gofra Market — учебный CTF маркетплейс с уязвимостями и комплектом инструментов для защиты и атаки.">
     <meta name="keywords" content="CTF, Attack-Defense, Go, Vue, MongoDB, уязвимости, pentest, обучение">
     <title>Gofra Market</title>
+    <style>
+      html,
+      body,
+      #q-app,
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+
+      body {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      input,
+      textarea,
+      select,
+      button,
+      [contenteditable='true'],
+      .allow-selection,
+      [data-allow-selection='true'] {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+        -webkit-touch-callout: inherit !important;
+      }
+    </style>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XFYBSKJNMH"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -14,7 +44,7 @@
   gtag('config', 'G-XFYBSKJNMH');
     </script>
     <script type="text/javascript">
-      (function(m,e,t,r,i,k,a){
+      (function(m,e,t,r,i,k,a){ч
         m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
         m[i].l=1*new Date();
         for (var j = 0; j < document.scripts.length; j++) {
@@ -38,6 +68,83 @@
           window.process = { env: { NODE_ENV: 'production' } };
         }
         window.__API_URL__ = window.__API_URL__ || null;
+      })();
+    </script>
+    <script>
+      ;(function () {
+        const INTERACTIVE_SELECTOR =
+          'input, textarea, select, button, [contenteditable="true"], .allow-selection, [data-allow-selection="true"]';
+
+        const isInteractiveTarget = function (target) {
+          if (!target) {
+            return false;
+          }
+          return Boolean(target.closest(INTERACTIVE_SELECTOR));
+        };
+
+        const blockClipboard = function (event) {
+          if (isInteractiveTarget(event.target)) {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        };
+
+        const blockSelection = function () {
+          const active = document.activeElement;
+          if (isInteractiveTarget(active)) {
+            return;
+          }
+          const selection = window.getSelection ? window.getSelection() : null;
+          if (selection && selection.removeAllRanges) {
+            selection.removeAllRanges();
+          }
+        };
+
+        const initGuards = function () {
+          const events = ['copy', 'cut', 'paste', 'contextmenu', 'selectstart', 'dragstart'];
+          events.forEach(function (eventName) {
+            document.addEventListener(eventName, blockClipboard, true);
+          });
+
+          document.addEventListener('selectionchange', blockSelection, true);
+
+          document.addEventListener(
+            'keydown',
+            function (event) {
+              if (isInteractiveTarget(event.target)) {
+                return;
+              }
+              const forbiddenKeys = ['a', 'c', 'x', 's', 'p', 'u', 'i', 'j'];
+              if ((event.ctrlKey || event.metaKey) && forbiddenKeys.includes(event.key.toLowerCase())) {
+                blockClipboard(event);
+              }
+
+              if (event.key === 'PrintScreen') {
+                blockClipboard(event);
+              }
+            },
+            true
+          );
+
+          document.addEventListener(
+            'gesturestart',
+            function (event) {
+              if (isInteractiveTarget(event.target)) {
+                return;
+              }
+              blockClipboard(event);
+            },
+            true
+          );
+        };
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initGuards, { once: true, passive: false });
+        } else {
+          initGuards();
+        }
       })();
     </script>
   </head>
