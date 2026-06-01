@@ -10,23 +10,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// Структура для репозитория сессий
+// Структура репозитория сессий
 type SessionRepo struct {
-	c *mongo.Collection // Коллекция
+	c *mongo.Collection // Коллекция сессий
 }
 
-// Создание нового репозитория
+// Создание нового репозитория сессий
 func NewSessionRepo(c *mongo.Collection) *SessionRepo {
 	return &SessionRepo{c: c}
 }
 
-// Метод для создания сессии
+// Метод создания сессии
 func (r *SessionRepo) Create(ctx context.Context, s *domain.Session) error {
 	_, err := r.c.InsertOne(ctx, s)
 	return err
 }
 
-// Метод для получения сессии по идентификатору
+// Метод получения сессии по идентификатору
 func (r *SessionRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.Session, error) {
 	var s domain.Session
 	err := r.c.FindOne(ctx, bson.M{"_id": id}).Decode(&s)
@@ -36,7 +36,7 @@ func (r *SessionRepo) ByID(ctx context.Context, id primitive.ObjectID) (*domain.
 	return &s, nil
 }
 
-// Метод для получения сессии по SID
+// Метод получения сессии по SID
 func (r *SessionRepo) BySID(ctx context.Context, sid string) (*domain.Session, error) {
 	var s domain.Session
 	err := r.c.FindOne(ctx, bson.M{"sid": sid}).Decode(&s)
@@ -46,16 +46,21 @@ func (r *SessionRepo) BySID(ctx context.Context, sid string) (*domain.Session, e
 	return &s, nil
 }
 
-// Метод для удаления сессий
+// Метод удаления сессии
 func (r *SessionRepo) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.c.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
 
-// Количество активных сессий на текущий момент
+// Метод подсчёта активных сессий
 func (r *SessionRepo) CountActive(ctx context.Context, now time.Time) (int64, error) {
 	filter := bson.M{
 		"expires_at": bson.M{"$gt": now},
 	}
 	return r.c.CountDocuments(ctx, filter)
+}
+
+// Метод подсчёта всех сохранённых сессий
+func (r *SessionRepo) CountTotal(ctx context.Context) (int64, error) {
+	return r.c.CountDocuments(ctx, bson.M{})
 }

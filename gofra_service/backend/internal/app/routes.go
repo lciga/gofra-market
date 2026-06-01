@@ -1,4 +1,3 @@
-// Пакет для работы сервера и роутера
 package app
 
 import (
@@ -7,16 +6,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Структура для хранения хэндлеров
+// Структура хэндлеров приложения
 type Handlers struct {
 	Auth    *handlers.AuthHandler       // Хэндлер аутентификации
 	Market  *handlers.MarketHandler     // Хэндлер маркета
-	Listing *handlers.ListingHandler    // Хэндлер листинга
-	Image   *handlers.ImageHandler      // Хэндлер для работы с изображениями
+	Listing *handlers.ListingHandler    // Хэндлер листингов
+	Image   *handlers.ImageHandler      // Хэндлер изображений
 	Stats   *handlers.StatisticsHandler // Хэндлер статистики
+	Admin   *handlers.AdminHandler      // Хэндлер админской панели
+	Content *handlers.ContentHandler    // Хэндлер материалов
 }
 
-// Регистрация роутов
+// Регистрация роутов приложения
 func RegisterRoutes(e *gin.Engine, h Handlers) {
 	e.POST("/api/register", h.Auth.Register)
 	e.POST("/api/login", h.Auth.Login)
@@ -35,4 +36,7 @@ func RegisterRoutes(e *gin.Engine, h Handlers) {
 	api.POST("/listings/:id/image_upload", h.Image.UploadFile)
 	api.GET("/listings/:id/image/meta", h.Image.GetMeta)
 	api.GET("/stats/active-users", h.Stats.ActiveUsers)
+	api.GET("/stats/visits", h.Stats.Visits)
+	api.GET("/admin/dashboard", h.Admin.Dashboard)
+	api.POST("/content/submit", h.Content.Submit)
 }

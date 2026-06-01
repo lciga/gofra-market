@@ -71,7 +71,7 @@ export default {
                     type: 'positive',
                     message: 'Регистрация успешна! Вам зачислено 100 горутин'
                 }) 
-                router.push('/')
+                router.push('/content-review')
             } catch (error) {
                 const errorMessage = error.response?.data?.error || error.message || 'Ошибка регистрации'
                 $q.notify({

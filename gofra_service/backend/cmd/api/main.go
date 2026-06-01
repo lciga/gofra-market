@@ -28,15 +28,16 @@ import (
 
 // Точка входа программы
 func main() {
-	// Контекст для отмены операций по таймауту
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	cfg := config.Load() // Загрузка конфига
 
+	// Контекст для отмены миграции по таймауту
+	migrationCtx, migrationCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer migrationCancel()
+
 	// Запуск миграций
-	if err := db.Migrate(ctx, cfg); err != nil {
+	if err := db.Migrate(migrationCtx, cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "migration failed: %v\n", err)
+		os.Exit(2)
 	}
 
 	// Подключение к БД
@@ -47,9 +48,14 @@ func main() {
 	}
 	defer db.Close(client)
 
+	// Контекст для отмены сида по таймауту
+	seedCtx, seedCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer seedCancel()
+
 	// Загрузка начальных данных
-	if err := db.SeedInitialData(ctx, database); err != nil {
+	if err := db.SeedInitialData(seedCtx, database); err != nil {
 		fmt.Fprintf(os.Stderr, "seed failed: %v\n", err)
+		os.Exit(2)
 	}
 
 	// Инициализация коллекций
@@ -70,6 +76,8 @@ func main() {
 	marketSvc := service.NewMarketService(listingRepo, goferRepo)
 	imageSvc := service.NewImageService(listingRepo)
 	statsSvc := service.NewStatisticsService(sessionRepo)
+	adminSvc := service.NewAdminService(userRepo, sessionRepo)
+	contentSvc := service.NewContentService(userRepo, cfg.EditorEmail)
 
 	// Инициализация хэндлеров
 	authH := handlers.NewAuthHandler(authSvc, "sid")
@@ -77,6 +85,8 @@ func main() {
 	marketH := handlers.NewMarketHandler(marketSvc)
 	imageH := handlers.NewImageHandler(imageSvc)
 	statsH := handlers.NewStatisticsHandler(statsSvc)
+	adminH := handlers.NewAdminHandler(adminSvc)
+	contentH := handlers.NewContentHandler(contentSvc)
 
 	engine := app.NewServer(cfg)
 	engine.Use(midleware.Auth(sessionRepo))
@@ -88,6 +98,8 @@ func main() {
 		Listing: listingH,
 		Image:   imageH,
 		Stats:   statsH,
+		Admin:   adminH,
+		Content: contentH,
 	})
 
 	docs.Register(engine)

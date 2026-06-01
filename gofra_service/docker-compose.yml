@@ -25,6 +25,7 @@ services:
       SERVER_PORT: 8080
       GIN_MODE: debug
       CORS_ALLOWED_ORIGINS: "*"
+      EDITOR_EMAIL: "editor@gofra-market.local"
     ports:
       - "8080:8080"
     restart: on-failure:5
@@ -36,14 +37,8 @@ services:
     container_name: gofra_frontend
     depends_on:
       - backend
-    environment:
-      - VIRTUAL_HOST=localhost
     ports:
       - "80:80"
-      - "443:443"
-    volumes:
-      - /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN:-gofra.lciga.ru}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
-      - /etc/letsencrypt/live/${LETSENCRYPT_DOMAIN:-gofra.lciga.ru}/privkey.pem:/etc/nginx/certs/privkey.pem:ro
     restart: unless-stopped
 
 volumes:

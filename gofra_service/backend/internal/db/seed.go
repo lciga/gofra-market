@@ -3,6 +3,7 @@ package db
 import (
 	"Gofra_Market/internal/domain"
 	"Gofra_Market/internal/logger"
+	"Gofra_Market/internal/service"
 	"context"
 	"fmt"
 	"time"
@@ -11,12 +12,17 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Создание данных при инициализации
 func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 	logger.Info("Checking if initial seed is needed", logrus.Fields{})
+
+	if err := ensureAuthSeed(ctx, db); err != nil {
+		return err
+	}
 
 	metaColl := db.Collection("_seed_meta")
 	var meta bson.M
@@ -44,12 +50,18 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 		ID:        primitive.NewObjectID(),
 		Login:     "system_seller",
 		PassHash:  passHash,
+		Role:      service.RoleSystem,
 		Balance:   100,
 		CreatedAt: time.Now(),
 	}
 
-	if _, err := usersColl.InsertOne(ctx, systemUser); err != nil {
-		return fmt.Errorf("inserting system user: %w", err)
+	if _, err := usersColl.UpdateOne(
+		ctx,
+		bson.M{"login": systemUser.Login},
+		bson.M{"$setOnInsert": systemUser},
+		options.Update().SetUpsert(true),
+	); err != nil {
+		return fmt.Errorf("upserting system user: %w", err)
 	}
 
 	logger.Info("Created system user", logrus.Fields{"login": systemUser.Login, "id": systemUser.ID.Hex()})
@@ -108,7 +120,7 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 	seedMeta := bson.M{
 		"_id":        "initial_seed",
 		"applied_at": time.Now(),
-		"version":    1,
+		"version":    2,
 	}
 	if _, err := metaColl.InsertOne(ctx, seedMeta); err != nil {
 		return fmt.Errorf("saving seed meta: %w", err)
@@ -119,5 +131,61 @@ func SeedInitialData(ctx context.Context, db *mongo.Database) error {
 		"listings": len(goferNames),
 	})
 
+	return nil
+}
+
+// Создание служебных аккаунтов и ролей
+func ensureAuthSeed(ctx context.Context, db *mongo.Database) error {
+	usersColl := db.Collection("users")
+
+	if _, err := usersColl.UpdateMany(
+		ctx,
+		bson.M{"role": bson.M{"$exists": false}},
+		bson.M{"$set": bson.M{"role": service.RoleEditor}},
+	); err != nil {
+		return fmt.Errorf("setting default user roles: %w", err)
+	}
+
+	adminHash, err := bcrypt.GenerateFromPassword([]byte("admin123456"), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hashing admin password: %w", err)
+	}
+
+	adminUser := domain.User{
+		ID:        primitive.NewObjectID(),
+		Login:     "admin",
+		PassHash:  adminHash,
+		Role:      service.RoleAdmin,
+		Balance:   1000,
+		CreatedAt: time.Now(),
+	}
+
+	result, err := usersColl.UpdateOne(
+		ctx,
+		bson.M{"login": adminUser.Login},
+		bson.M{
+			"$setOnInsert": bson.M{
+				"_id":        adminUser.ID,
+				"login":      adminUser.Login,
+				"balance":    adminUser.Balance,
+				"created_at": adminUser.CreatedAt,
+			},
+			"$set": bson.M{
+				"pass_hash": adminUser.PassHash,
+				"role":      service.RoleAdmin,
+			},
+		},
+		options.Update().SetUpsert(true),
+	)
+	if err != nil {
+		return fmt.Errorf("upserting admin user: %w", err)
+	}
+
+	logger.Info("Auth seed checked", logrus.Fields{
+		"admin_login": adminUser.Login,
+		"matched":     result.MatchedCount,
+		"modified":    result.ModifiedCount,
+		"upserted":    result.UpsertedCount,
+	})
 	return nil
 }

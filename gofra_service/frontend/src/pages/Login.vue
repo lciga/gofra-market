@@ -63,9 +63,10 @@ export default {
                 await store.dispatch('auth/login', form.value)
                 $q.notify({
                     type: 'positive',
-                    message: 'Успешеый вход!'
+                    message: 'Успешный вход!'
                 })
-                router.push('/')
+                const role = store.state.auth.user?.role
+                router.push(role === 'admin' ? '/admin' : '/content-review')
             } catch (error) {
                 const errorMessage = error.response?.data?.error || error.message || 'Ошибка входа!'
                 $q.notify({

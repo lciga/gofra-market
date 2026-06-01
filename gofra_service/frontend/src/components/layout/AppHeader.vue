@@ -9,6 +9,8 @@
             </q-toolbar-title>
 
             <div v-if="isAuthenticated && user" class="row items-center q-gutter-sm">
+                <q-btn v-if="user.role === 'admin'" flat icon="admin_panel_settings" label="Админка" to="/admin" />
+                <q-btn v-else flat icon="edit_note" label="Материал" to="/content-review" />
                 <q-btn flat icon="person" :label="user.login || 'Профиль'" @click="$router.push('/profile')" />
                 <q-badge color="accent" class="q-pa-sm">Баланс: {{ formatPrice(user.balance || 0) }} горутин</q-badge>
                 <q-btn flat icon="logout" label="Выход" @click="handleLogout" />

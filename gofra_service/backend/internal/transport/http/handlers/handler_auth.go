@@ -1,4 +1,3 @@
-// Пакет для работы с хэндлерами
 package handlers
 
 import (
@@ -6,50 +5,41 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Структура запроса на регистрацию
 type registerReq struct {
-	Login    string `json:"login" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Login    string `json:"login" binding:"required"`    // Логин
+	Password string `json:"password" binding:"required"` // Пароль
 }
 
 // Структура запроса на вход
 type loginReq struct {
-	Login    string `json:"login" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Login    string `json:"login" binding:"required"`    // Логин
+	Password string `json:"password" binding:"required"` // Пароль
 }
 
-// Структура ответа на запрос текущего пользователя
+// Структура ответа текущего пользователя
 type meResp struct {
-	UserID  string `json:"user_id"`
-	Login   string `json:"login"`
-	Balance int64  `json:"balance"`
+	UserID  string `json:"user_id"`         // Идентификатор пользователя
+	Login   string `json:"login"`           // Логин
+	Role    string `json:"role"`            // Роль
+	Balance int64  `json:"balance"`         // Баланс
+	Token   string `json:"token,omitempty"` // SID сессии
 }
 
 // Структура хэндлера аутентификации
 type AuthHandler struct {
 	svc    *service.AuthService // Сервис аутентификации
-	cookie string               // Куки
+	cookie string               // Имя cookie сессии
 }
 
-// Создание нового хэндлера
+// Создание нового хэндлера аутентификации
 func NewAuthHandler(s *service.AuthService, c string) *AuthHandler {
 	return &AuthHandler{svc: s, cookie: c}
 }
 
-// Register godoc
-// @Summary Регистрация пользователя
-// @Description Создаёт пользователя и авторизует его через cookie.
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param payload body registerReq true "Данные пользователя"
-// @Success 201 {object} meResp
-// @Failure 400 {object} errorResponse
-// @Failure 500 {object} errorResponse
-// @Router /api/register [post]
+// Метод регистрации пользователя
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -64,21 +54,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	c.SetCookie(h.cookie, sid, 60*60*24*30, "/", "", false, true)
-	c.JSON(http.StatusCreated, meResp{UserID: user.ID.Hex(), Login: user.Login, Balance: user.Balance})
+	c.JSON(http.StatusCreated, mapMeResp(user.ID.Hex(), user.Login, user.Role, user.Balance, sid))
 }
 
-// Login godoc
-// @Summary Авторизация пользователя
-// @Description Аутентифицирует пользователя и устанавливает cookie сессии.
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param payload body loginReq true "Учётные данные"
-// @Success 200 {object} meResp
-// @Failure 400 {object} errorResponse
-// @Failure 401 {object} errorResponse
-// @Failure 500 {object} errorResponse
-// @Router /api/login [post]
+// Метод входа пользователя
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -93,28 +72,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.SetCookie(h.cookie, sid, 60*60*24*30, "/", "", false, true)
-	c.JSON(http.StatusOK, meResp{UserID: user.ID.Hex(), Login: user.Login, Balance: user.Balance})
+	c.JSON(http.StatusOK, mapMeResp(user.ID.Hex(), user.Login, user.Role, user.Balance, sid))
 }
 
-// Me godoc
-// @Summary Текущий пользователь
-// @Description Возвращает текущего авторизованного пользователя.
-// @Tags auth
-// @Produce json
-// @Success 200 {object} meResp
-// @Failure 401 {object} errorResponse
-// @Failure 500 {object} errorResponse
-// @Failure 404 {object} errorResponse
-// @Router /api/me [get]
+// Метод получения текущего пользователя
 func (h *AuthHandler) Me(c *gin.Context) {
-	v, ok := c.Get("userID")
-	if !ok {
-		c.JSON(http.StatusUnauthorized, errorResponse{Error: "unauthenticated"})
-		return
-	}
-	uid, ok := v.(primitive.ObjectID)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, errorResponse{Error: "invalid user id in context"})
+	uid, err := currentUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, errorResponse{Error: err.Error()})
 		return
 	}
 
@@ -123,5 +88,16 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		c.JSON(http.StatusNotFound, errorResponse{Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, meResp{UserID: user.ID.Hex(), Login: user.Login, Balance: user.Balance})
+	c.JSON(http.StatusOK, mapMeResp(user.ID.Hex(), user.Login, user.Role, user.Balance, ""))
+}
+
+// Преобразование пользователя в ответ API
+func mapMeResp(id, login, role string, balance int64, token string) meResp {
+	return meResp{
+		UserID:  id,
+		Login:   login,
+		Role:    role,
+		Balance: balance,
+		Token:   token,
+	}
 }

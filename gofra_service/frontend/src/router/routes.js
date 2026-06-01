@@ -17,6 +17,18 @@ const routes = [
         meta: {requiresAuth: true},
     },
     {
+        path: '/admin',
+        name: 'Admin',
+        component: () => import('pages/Admin.vue'),
+        meta: {requiresAuth: true, role: 'admin'},
+    },
+    {
+        path: '/content-review',
+        name: 'Content Review',
+        component: () => import('pages/ContentReview.vue'),
+        meta: {requiresAuth: true},
+    },
+    {
         path: '/login',
         name: 'Login',
         component: () => import('pages/Login.vue'),
